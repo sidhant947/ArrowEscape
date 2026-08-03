@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flame/game.dart';
+import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants.dart';
@@ -42,8 +43,8 @@ class ArrowPuzzleGame extends FlameGame {
     gridComponent = GridComponent(
       gameState: gameState,
       gridPixelSize: gridSize,
-      position: Vector2(gridX, gridY),
-    );
+      position: Vector2(gridX + gridSize / 2, gridY + gridSize / 2),
+    )..anchor = Anchor.center;
 
     add(gridComponent!);
   }
@@ -60,7 +61,7 @@ class ArrowPuzzleGame extends FlameGame {
     final gridY = (size.y - gridSize) / 2;
 
     if (gridComponent != null) {
-      gridComponent!.position = Vector2(gridX, gridY);
+      gridComponent!.position = Vector2(gridX + gridSize / 2, gridY + gridSize / 2);
       gridComponent!.resize(gridSize);
     }
   }

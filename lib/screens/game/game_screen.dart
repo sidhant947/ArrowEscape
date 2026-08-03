@@ -8,6 +8,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_colors.dart';
+import '../../core/app_themes.dart';
 import '../../core/constants.dart';
 import '../../data/models/arrow.dart';
 import '../../data/models/level.dart';
@@ -160,6 +161,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _gameState?.removeListener(_onGameStateChanged);
     _gameState = GameState(
       level: _level,
+      theme: ref.read(progressRepositoryProvider).selectedTheme,
       onLevelComplete: _onLevelComplete,
       onGameOver: _onGameOver,
       onLifeLost: _onLifeLost,
@@ -471,8 +473,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   @override
   Widget build(BuildContext context) {
+    final progressState = ref.watch(progressRepositoryProvider);
+    final themeColors = AppThemes.getThemeColors(progressState.selectedTheme);
+
     if (_isLoadingLevel || !_isLevelReady) {
-      return const _LevelLoadingScreen();
+      return _LevelLoadingScreen(themeColors: themeColors);
     }
 
     final totalArrows = _level.arrows.length;
@@ -485,7 +490,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+        decoration: BoxDecoration(gradient: themeColors.bgGradient),
         child: SafeArea(
           child: Column(
             children: [
@@ -629,7 +634,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   bool get _isLevelReady => _gameState != null;
 }
 
-class _TimerDisplay extends StatelessWidget {
+class _TimerDisplay extends ConsumerWidget {
   final int timeRemaining;
   final int totalTime;
 
@@ -645,11 +650,13 @@ class _TimerDisplay extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final isLowTime = timeRemaining <= 15 || timeRemaining <= totalTime * 0.15;
+  Widget build(BuildContext context, WidgetRef ref) {
     final progress = (timeRemaining / totalTime).clamp(0.0, 1.0);
-
-    final color = isLowTime ? const Color(0xFF808080) : AppColors.accent;
+    final isLowTime = timeRemaining <= 15 || timeRemaining <= totalTime * 0.15;
+    
+    final progressState = ref.watch(progressRepositoryProvider);
+    final themeColors = AppThemes.getThemeColors(progressState.selectedTheme);
+    final color = isLowTime ? const Color(0xFF808080) : themeColors.accentColor;
 
     Widget content = Container(
       width: 140,
@@ -938,9 +945,9 @@ class _LevelCompleteDialog extends StatelessWidget {
               iconColor: AppColors.textPrimary,
               onTap: () async {
                 final uri = Uri.parse('https://ko-fi.com/sidhant947');
-                if (await canLaunchUrl(uri)) {
+                try {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
+                } catch (_) {}
               },
             ),
           ],
@@ -1107,7 +1114,7 @@ class _DeadlockDialog extends StatelessWidget {
   }
 }
 
-class _DialogButton extends StatelessWidget {
+class _DialogButton extends ConsumerWidget {
   final String label;
   final IconData icon;
   final VoidCallback onTap;
@@ -1123,7 +1130,10 @@ class _DialogButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress = ref.watch(progressRepositoryProvider);
+    final themeColors = AppThemes.getThemeColors(progress.selectedTheme);
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -1135,11 +1145,11 @@ class _DialogButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.accent, width: 1.5),
-          boxShadow: const [
+          border: Border.all(color: themeColors.accentColor, width: 1.5),
+          boxShadow: [
             BoxShadow(
-              color: AppColors.accentDark,
-              offset: Offset(0, 4),
+              color: themeColors.accentDark,
+              offset: const Offset(0, 4),
               blurRadius: 0,
             ),
           ],
@@ -1149,7 +1159,7 @@ class _DialogButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: iconColor == Colors.white ? AppColors.accent : iconColor, size: 20),
+              Icon(icon, color: iconColor == Colors.white ? themeColors.accentColor : iconColor, size: 20),
               const SizedBox(width: 8),
               Text(
                 label,
@@ -1224,7 +1234,8 @@ class _BouncingDotsState extends State<_BouncingDots>
 }
 
 class _LevelLoadingScreen extends StatefulWidget {
-  const _LevelLoadingScreen();
+  final ThemeColors themeColors;
+  const _LevelLoadingScreen({required this.themeColors});
 
   @override
   State<_LevelLoadingScreen> createState() => _LevelLoadingScreenState();
@@ -1235,7 +1246,7 @@ class _LevelLoadingScreenState extends State<_LevelLoadingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+        decoration: BoxDecoration(gradient: widget.themeColors.bgGradient),
         child: const Center(
           child: _BouncingDots(),
         ),

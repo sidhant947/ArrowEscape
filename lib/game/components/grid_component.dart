@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/level.dart';
 import '../../data/models/arrow.dart';
+import '../../core/app_themes.dart';
 import '../game_state.dart';
 import 'arrow_component.dart';
 
@@ -16,6 +17,8 @@ class GridComponent extends PositionComponent {
   late Set<String> _mask;
 
   ui.Picture? _cachedDotGridPicture;
+  double _entryTime = 0.0;
+  bool _entryCompleted = false;
 
   void _invalidateDotGrid() {
     _cachedDotGridPicture?.dispose();
@@ -39,6 +42,7 @@ class GridComponent extends PositionComponent {
   @override
   Future<void> onLoad() async {
     size = Vector2.all(gridPixelSize);
+    scale = Vector2.all(0.0);
     _refreshMask();
     _buildArrows();
   }
@@ -89,11 +93,14 @@ class GridComponent extends PositionComponent {
     final inR = baseDot;
     final outR = inR * 0.55;
 
+    final themeColors = AppThemes.getThemeColors(gameState.theme);
+    final dotColor = themeColors.arrowColor;
+
     final inPaint = Paint()
-      ..color = const Color(0x3CFFFFFF)
+      ..color = dotColor.withValues(alpha: 0.24)
       ..style = PaintingStyle.fill;
     final outPaint = Paint()
-      ..color = const Color(0x11FFFFFF)
+      ..color = dotColor.withValues(alpha: 0.07)
       ..style = PaintingStyle.fill;
 
     for (int r = 0; r < gridSize; r++) {
@@ -119,20 +126,21 @@ class GridComponent extends PositionComponent {
     }
     canvas.drawPicture(_cachedDotGridPicture!);
 
+    final themeColors = AppThemes.getThemeColors(gameState.theme);
     final orphanDots = gameState.orphanDots;
     for (final entry in orphanDots.entries) {
       final parts = entry.key.split(',');
       final dotR = int.parse(parts[0]);
       final dotC = int.parse(parts[1]);
       _drawOrphanDot(canvas, Offset((dotC + 0.5) * cs, (dotR + 0.5) * cs),
-          entry.value, cs);
+          entry.value, cs, themeColors);
     }
 
     super.render(canvas);
   }
 
   static void _drawOrphanDot(
-      Canvas canvas, Offset center, OrphanDotType type, double cs) {
+      Canvas canvas, Offset center, OrphanDotType type, double cs, ThemeColors themeColors) {
     if (type == OrphanDotType.neutral) return;
 
     canvas.drawCircle(
@@ -147,7 +155,7 @@ class GridComponent extends PositionComponent {
       center,
       cs * 0.38,
       Paint()
-        ..color = const Color(0xFF666666)
+        ..color = themeColors.arrowColor.withValues(alpha: 0.4)
         ..style = PaintingStyle.stroke
         ..strokeWidth = cs * 0.04,
     );
@@ -166,7 +174,7 @@ class GridComponent extends PositionComponent {
     canvas.rotate(dir.rotationRadians);
 
     final linePaint = Paint()
-      ..color = Colors.white
+      ..color = themeColors.arrowColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = cs * 0.06
       ..strokeCap = StrokeCap.round;
@@ -183,7 +191,7 @@ class GridComponent extends PositionComponent {
     canvas.drawPath(
       arrowheadPath,
       Paint()
-        ..color = Colors.white
+        ..color = themeColors.arrowColor
         ..style = PaintingStyle.fill,
     );
 
@@ -193,6 +201,17 @@ class GridComponent extends PositionComponent {
   @override
   void update(double dt) {
     super.update(dt);
+    if (!_entryCompleted) {
+      _entryTime += dt;
+      if (_entryTime >= 0.5) {
+        scale = Vector2.all(1.0);
+        _entryCompleted = true;
+      } else {
+        final t = _entryTime / 0.5;
+        final double bounce = Curves.easeOutBack.transform(t);
+        scale = Vector2.all(bounce);
+      }
+    }
     if (_arrowComponents.length != gameState.arrows.length) {
       final current = gameState.arrows.map((a) => a.id).toSet();
       final gone =

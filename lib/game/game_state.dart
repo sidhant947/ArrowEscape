@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/models/arrow.dart';
 import '../data/models/level.dart';
 import '../core/constants.dart';
+import '../core/app_themes.dart';
 
 class GameState extends ChangeNotifier {
   
@@ -12,6 +13,7 @@ class GameState extends ChangeNotifier {
   bool _isComplete = false;
   bool _isGameOver = false;
   bool _isDeadlocked = false;
+  final GameTheme theme;
 
   late Map<String, OrphanDotType> _orphanDots;
 
@@ -32,6 +34,7 @@ class GameState extends ChangeNotifier {
 
   GameState({
     required LevelModel level,
+    required this.theme,
     required this.onLevelComplete,
     required this.onGameOver,
     required this.onLifeLost,

@@ -5,10 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_colors.dart';
+import '../../core/app_themes.dart';
 import '../../core/constants.dart';
 import '../../main.dart';
 import '../game/game_screen.dart';
 import '../level_select/level_select_screen.dart';
+import '../settings/settings_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -132,6 +134,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final progress = ref.watch(progressRepositoryProvider);
+    final themeColors = AppThemes.getThemeColors(progress.selectedTheme);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -143,7 +146,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         leading: Align(
           alignment: Alignment.centerLeft,
           child: GestureDetector(
-            onTap: () => launchUrl(Uri.parse('https://github.com/sidhant947/ArrowEscape')),
+            onTap: () async {
+              try {
+                await launchUrl(Uri.parse('https://github.com/sidhant947/ArrowEscape'), mode: LaunchMode.externalApplication);
+              } catch (_) {}
+            },
             child: Container(
               margin: const EdgeInsets.only(left: 16),
               width: 44,
@@ -178,7 +185,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: GestureDetector(
-              onTap: () => launchUrl(Uri.parse('https://ko-fi.com/sidhant947')),
+              onTap: () async {
+                try {
+                  await launchUrl(Uri.parse('https://ko-fi.com/sidhant947'), mode: LaunchMode.externalApplication);
+                } catch (_) {}
+              },
               child: Container(
                 margin: const EdgeInsets.only(right: 16),
                 width: 44,
@@ -195,7 +206,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+        decoration: BoxDecoration(gradient: themeColors.bgGradient),
         child: SafeArea(
           child: Column(
             children: [
@@ -275,6 +286,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       label: 'RANDOM',
                       onTap: _isNavigating ? null : _showRandomPuzzleDialog,
                     ),
+
+                    const SizedBox(height: 14),
+
+                    _MenuButton(
+                      label: 'SETTINGS',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -288,7 +309,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _MenuButton extends StatelessWidget {
+class _MenuButton extends ConsumerWidget {
   final String label;
   final VoidCallback? onTap;
   final bool showBorder;
@@ -300,7 +321,10 @@ class _MenuButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress = ref.watch(progressRepositoryProvider);
+    final themeColors = AppThemes.getThemeColors(progress.selectedTheme);
+
     return GestureDetector(
       onTap: () {
         if (onTap != null) {
@@ -314,11 +338,11 @@ class _MenuButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.accent, width: 1.5),
-          boxShadow: const [
+          border: Border.all(color: themeColors.accentColor, width: 1.5),
+          boxShadow: [
             BoxShadow(
-              color: AppColors.accentDark,
-              offset: Offset(0, 5),
+              color: themeColors.accentDark,
+              offset: const Offset(0, 5),
               blurRadius: 0,
             ),
           ],
@@ -339,7 +363,7 @@ class _MenuButton extends StatelessWidget {
   }
 }
 
-class _DifficultyButton extends StatelessWidget {
+class _DifficultyButton extends ConsumerWidget {
   final String label;
   final IconData icon;
   final VoidCallback onTap;
@@ -351,7 +375,10 @@ class _DifficultyButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress = ref.watch(progressRepositoryProvider);
+    final themeColors = AppThemes.getThemeColors(progress.selectedTheme);
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -363,11 +390,11 @@ class _DifficultyButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.accent, width: 1.5),
-          boxShadow: const [
+          border: Border.all(color: themeColors.accentColor, width: 1.5),
+          boxShadow: [
             BoxShadow(
-              color: AppColors.accentDark,
-              offset: Offset(0, 4),
+              color: themeColors.accentDark,
+              offset: const Offset(0, 4),
               blurRadius: 0,
             ),
           ],
@@ -375,7 +402,7 @@ class _DifficultyButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: AppColors.accent, size: 20),
+            Icon(icon, color: themeColors.accentColor, size: 20),
             const SizedBox(width: 10),
             Text(
               label,

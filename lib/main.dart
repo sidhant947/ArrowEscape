@@ -28,7 +28,7 @@ void main() async {
   runApp(
     ProviderScope(
       overrides: [
-        progressRepositoryProvider.overrideWithValue(progressRepo),
+        progressRepositoryProvider.overrideWith((ref) => progressRepo),
         levelRepositoryProvider.overrideWithValue(levelRepo),
       ],
       child: const ArrowPuzzleApp(),
@@ -60,7 +60,7 @@ class ArrowPuzzleApp extends StatelessWidget {
   }
 }
 
-final progressRepositoryProvider = Provider<ProgressRepository>((ref) {
+final progressRepositoryProvider = ChangeNotifierProvider<ProgressRepository>((ref) {
   throw UnimplementedError('Must be overridden');
 });
 

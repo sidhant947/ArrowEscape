@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/app_colors.dart';
+import '../../core/app_themes.dart';
 import '../../data/models/arrow.dart';
 import '../../data/models/level.dart';
 import '../game_state.dart';
@@ -465,6 +466,29 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       bodyPath = _cachedBodyPath!;
     }
 
+    final themeColors = AppThemes.getThemeColors(gameState.theme);
+
+    if (themeColors.hasGlow) {
+      final glowPaint = Paint()
+        ..color = mainColor.withValues(alpha: 0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = sw * 2.5
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+      canvas.drawPath(bodyPath, glowPaint);
+    }
+
+    if (isAnimatingNow) {
+      final trailPaint = Paint()
+        ..color = mainColor.withValues(alpha: 0.15)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = sw * 2.0
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      canvas.drawPath(bodyPath, trailPaint);
+    }
+
     final bodyPaint = Paint()
       ..color = mainColor
       ..style = PaintingStyle.stroke
@@ -622,7 +646,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     if (arrowModel.state == ArrowState.blocked || _isBlockedAnimating) {
       return const Color(0xFF606060);
     }
-    return Colors.white;
+    final themeColors = AppThemes.getThemeColors(gameState.theme);
+    return themeColors.arrowColor;
   }
 
   List<Offset> _slice(

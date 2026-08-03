@@ -21,6 +21,12 @@ Unwind and challenge your brain with Arrow Escape, a clean, minimalist puzzle ga
 
 Whether you have two minutes to spare or want to zone out for an hour, Arrow Escape is the ultimate clean, privacy-respecting puzzle fix.
 
+## 🎨 Themes & Custom Skins
+
+Arrow Escape includes a theme selection system with custom skins. If you use it , support by giving a star to repo.
+
+*   **Unlock Code**: `THANKYOU` (Enter this code to unlock all themes & custom skins instantly).
+
 ---
 
 ## License

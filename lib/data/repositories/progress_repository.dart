@@ -4,6 +4,7 @@ import 'package:hive/hive.dart';
 
 import '../models/level_result.dart';
 import '../../core/constants.dart';
+import '../../core/app_themes.dart';
 
 class ProgressRepository extends ChangeNotifier {
   late Box _box;
@@ -12,6 +13,8 @@ class ProgressRepository extends ChangeNotifier {
   int _lives = AppConstants.maxLives;
   int _currentLevel = 1;
   int _highestUnlockedLevel = 1;
+  GameTheme _selectedTheme = GameTheme.classic;
+  bool _skinsUnlocked = false;
 
   final Map<int, LevelResult> _levelResults = {};
 
@@ -21,6 +24,8 @@ class ProgressRepository extends ChangeNotifier {
   int get highestUnlockedLevel => _highestUnlockedLevel;
   bool get hasLives => _lives > 0;
   bool get livesAreFull => _lives >= AppConstants.maxLives;
+  GameTheme get selectedTheme => _selectedTheme;
+  bool get skinsUnlocked => _skinsUnlocked;
 
   int getStarsForLevel(int level) => _levelResults[level]?.stars ?? 0;
 
@@ -48,6 +53,9 @@ class ProgressRepository extends ChangeNotifier {
     _lives = _box.get('lives', defaultValue: AppConstants.maxLives);
     _currentLevel = _box.get('currentLevel', defaultValue: 1);
     _highestUnlockedLevel = _box.get('highestUnlockedLevel', defaultValue: 1);
+    final themeStr = _box.get('selectedTheme', defaultValue: GameTheme.classic.name);
+    _selectedTheme = GameTheme.values.firstWhere((t) => t.name == themeStr, orElse: () => GameTheme.classic);
+    _skinsUnlocked = _box.get('skinsUnlocked', defaultValue: false);
 
     for (final key in _resultsBox.keys) {
       final level = int.tryParse(key.toString());
@@ -69,12 +77,31 @@ class ProgressRepository extends ChangeNotifier {
       'lives': _lives,
       'currentLevel': _currentLevel,
       'highestUnlockedLevel': _highestUnlockedLevel,
+      'selectedTheme': _selectedTheme.name,
+      'skinsUnlocked': _skinsUnlocked,
     });
 
     for (final entry in _levelResults.entries) {
       await _resultsBox.put(entry.key.toString(), jsonEncode(entry.value.toJson()));
     }
   }
+
+  Future<void> setTheme(GameTheme theme) async {
+    _selectedTheme = theme;
+    await _save();
+    notifyListeners();
+  }
+
+  bool unlockSkins(String code) {
+    if (code.trim().toUpperCase() == 'THANKYOU') {
+      _skinsUnlocked = true;
+      _save();
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
 
   Future<void> recordLevelComplete(LevelResult result) async {
     final existing = _levelResults[result.levelNumber];
