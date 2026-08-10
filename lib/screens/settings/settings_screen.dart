@@ -9,108 +9,9 @@ class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   void _showUnlockDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Unlock Theme & Skins',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Unlock all custom themes and premium styling options.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFDD00),
-                  foregroundColor: Colors.black,
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () async {
-                  try {
-                    await launchUrl(
-                      Uri.parse('https://buymeacoffee.com/sidhant947/e/562696'),
-                      mode: LaunchMode.externalApplication,
-                    );
-                  } catch (_) {}
-                },
-                icon: const Icon(Icons.shopping_bag),
-                label: const Text(
-                  'GET UNLOCK CODE',
-                  style: TextStyle(fontWeight: FontWeight.w900),
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: controller,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Enter unlock code',
-                  hintStyle: const TextStyle(color: Colors.white30),
-                  filled: true,
-                  fillColor: AppColors.surfaceLight,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () {
-                      final success = ref.read(progressRepositoryProvider).unlockSkins(controller.text);
-                      Navigator.pop(ctx);
-                      if (success) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('All themes and skins unlocked!')),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Invalid unlock code!')),
-                        );
-                      }
-                    },
-                    child: const Text('Unlock', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      builder: (ctx) => _UnlockDialog(ref: ref),
     );
   }
 
@@ -234,6 +135,203 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 );
               }),
+              const SizedBox(height: 24),
+              const Text(
+                'PREFERENCES',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildPreferenceTile(
+                title: 'SOUND EFFECTS',
+                value: progress.soundEnabled,
+                onChanged: (_) => ref.read(progressRepositoryProvider).toggleSound(),
+                accentColor: themeColors.accentColor,
+              ),
+              const SizedBox(height: 14),
+              _buildPreferenceTile(
+                title: 'HAPTIC FEEDBACK',
+                value: progress.hapticsEnabled,
+                onChanged: (_) => ref.read(progressRepositoryProvider).toggleHaptics(),
+                accentColor: themeColors.accentColor,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreferenceTile({
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required Color accentColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.surfaceLight,
+          width: 2,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textPrimary,
+              letterSpacing: 1.5,
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: accentColor,
+            activeTrackColor: accentColor.withValues(alpha: 0.3),
+            inactiveThumbColor: AppColors.textMuted,
+            inactiveTrackColor: AppColors.surfaceLight,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UnlockDialog extends StatefulWidget {
+  final WidgetRef ref;
+
+  const _UnlockDialog({required this.ref});
+
+  @override
+  State<_UnlockDialog> createState() => _UnlockDialogState();
+}
+
+class _UnlockDialogState extends State<_UnlockDialog> {
+  final _controller = TextEditingController();
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Unlock Theme & Skins',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Unlock all custom themes and premium styling options.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFDD00),
+                  foregroundColor: Colors.black,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  try {
+                    await launchUrl(
+                      Uri.parse('https://buymeacoffee.com/sidhant947/e/562696'),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  } catch (_) {}
+                },
+                icon: const Icon(Icons.local_cafe, size: 20),
+                label: const Text(
+                  'Get Unlock Code',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _controller,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'Enter unlock code',
+                  hintStyle: const TextStyle(color: AppColors.textMuted),
+                  filled: true,
+                  fillColor: AppColors.surfaceLight,
+                  errorText: _errorMessage,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    onPressed: () {
+                      final code = _controller.text;
+                      final success = widget.ref.read(progressRepositoryProvider).unlockSkins(code);
+                      if (success) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('All themes and skins unlocked!')),
+                        );
+                      } else {
+                        setState(() {
+                          _errorMessage = 'Invalid unlock code';
+                        });
+                      }
+                    },
+                    child: const Text('Unlock Now', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

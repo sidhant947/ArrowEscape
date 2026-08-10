@@ -5,6 +5,7 @@ import 'package:hive/hive.dart';
 import '../models/level_result.dart';
 import '../../core/constants.dart';
 import '../../core/app_themes.dart';
+import '../../core/audio_haptic_helper.dart';
 
 class ProgressRepository extends ChangeNotifier {
   late Box _box;
@@ -15,6 +16,8 @@ class ProgressRepository extends ChangeNotifier {
   int _highestUnlockedLevel = 1;
   GameTheme _selectedTheme = GameTheme.classic;
   bool _skinsUnlocked = false;
+  bool _soundEnabled = false;
+  bool _hapticsEnabled = true;
 
   final Map<int, LevelResult> _levelResults = {};
 
@@ -26,6 +29,8 @@ class ProgressRepository extends ChangeNotifier {
   bool get livesAreFull => _lives >= AppConstants.maxLives;
   GameTheme get selectedTheme => _selectedTheme;
   bool get skinsUnlocked => _skinsUnlocked;
+  bool get soundEnabled => _soundEnabled;
+  bool get hapticsEnabled => _hapticsEnabled;
 
   int getStarsForLevel(int level) => _levelResults[level]?.stars ?? 0;
 
@@ -56,6 +61,10 @@ class ProgressRepository extends ChangeNotifier {
     final themeStr = _box.get('selectedTheme', defaultValue: GameTheme.classic.name);
     _selectedTheme = GameTheme.values.firstWhere((t) => t.name == themeStr, orElse: () => GameTheme.classic);
     _skinsUnlocked = _box.get('skinsUnlocked', defaultValue: false);
+    _soundEnabled = _box.get('soundEnabled', defaultValue: false);
+    _hapticsEnabled = _box.get('hapticsEnabled', defaultValue: true);
+    AudioHapticHelper.soundEnabled = _soundEnabled;
+    AudioHapticHelper.hapticsEnabled = _hapticsEnabled;
 
     for (final key in _resultsBox.keys) {
       final level = int.tryParse(key.toString());
@@ -79,6 +88,8 @@ class ProgressRepository extends ChangeNotifier {
       'highestUnlockedLevel': _highestUnlockedLevel,
       'selectedTheme': _selectedTheme.name,
       'skinsUnlocked': _skinsUnlocked,
+      'soundEnabled': _soundEnabled,
+      'hapticsEnabled': _hapticsEnabled,
     });
 
     for (final entry in _levelResults.entries) {
@@ -88,6 +99,20 @@ class ProgressRepository extends ChangeNotifier {
 
   Future<void> setTheme(GameTheme theme) async {
     _selectedTheme = theme;
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> toggleSound() async {
+    _soundEnabled = !_soundEnabled;
+    AudioHapticHelper.soundEnabled = _soundEnabled;
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> toggleHaptics() async {
+    _hapticsEnabled = !_hapticsEnabled;
+    AudioHapticHelper.hapticsEnabled = _hapticsEnabled;
     await _save();
     notifyListeners();
   }

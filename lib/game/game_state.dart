@@ -3,6 +3,7 @@ import '../data/models/arrow.dart';
 import '../data/models/level.dart';
 import '../core/constants.dart';
 import '../core/app_themes.dart';
+import '../core/game_mode.dart';
 
 class GameState extends ChangeNotifier {
   
@@ -14,6 +15,7 @@ class GameState extends ChangeNotifier {
   bool _isGameOver = false;
   bool _isDeadlocked = false;
   final GameTheme theme;
+  final GameMode gameMode;
 
   late Map<String, OrphanDotType> _orphanDots;
 
@@ -39,6 +41,7 @@ class GameState extends ChangeNotifier {
     required this.onGameOver,
     required this.onLifeLost,
     required this.onDeadlock,
+    this.gameMode = GameMode.classic,
     this.onCombo,
     this.onParticleBurst,
     this.onCameraShake,
@@ -46,6 +49,7 @@ class GameState extends ChangeNotifier {
     _currentLevel = level;
     _arrows = level.arrows.map((a) => a.copyWith()).toList();
     _orphanDots = {for (final od in level.orphanDots) od.key: od.type};
+    _lives = gameMode == GameMode.zen ? 999 : AppConstants.maxLives;
   }
 
   List<ArrowModel> get arrows => _arrows;
@@ -158,10 +162,12 @@ class GameState extends ChangeNotifier {
 
   TapResult _handleBlocked(int index, ArrowModel arrow, String arrowId) {
     _arrows[index] = arrow.copyWith(state: ArrowState.blocked);
-    _lives--;
-    _livesLost++;
-    onLifeLost();
-
+    if (gameMode != GameMode.zen) {
+      _lives--;
+      _livesLost++;
+      onLifeLost();
+    }
+ 
     Future.delayed(AppConstants.arrowShakeDuration, () {
       final idx = _arrows.indexWhere((a) => a.id == arrowId);
       if (idx != -1) {
@@ -169,14 +175,14 @@ class GameState extends ChangeNotifier {
         notifyListeners();
       }
     });
-
-    if (_lives <= 0) {
+ 
+    if (gameMode != GameMode.zen && _lives <= 0) {
       _isGameOver = true;
       onGameOver();
       notifyListeners();
       return TapResult.blocked;
     }
-
+ 
     notifyListeners();
     return TapResult.blocked;
   }
@@ -232,7 +238,7 @@ class GameState extends ChangeNotifier {
     _arrows = _currentLevel.arrows.map((a) => a.copyWith(state: ArrowState.idle)).toList();
     _orphanDots = {for (final od in _currentLevel.orphanDots) od.key: od.type};
     _consumedDotsByArrow.clear();
-    _lives = AppConstants.maxLives;
+    _lives = gameMode == GameMode.zen ? 999 : AppConstants.maxLives;
     _livesLost = 0;
     _isComplete = false;
     _isGameOver = false;

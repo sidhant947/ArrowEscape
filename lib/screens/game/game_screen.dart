@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:math';
 import 'package:flame/game.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +9,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_themes.dart';
 import '../../core/constants.dart';
+import '../../core/audio_haptic_helper.dart';
+import '../../core/game_mode.dart';
 import '../../data/models/arrow.dart';
 import '../../data/models/level.dart';
 import '../../data/models/level_result.dart';
@@ -23,8 +24,14 @@ import '../home/home_screen.dart';
 class GameScreen extends ConsumerStatefulWidget {
   final int level;
   final bool isRandom;
+  final GameMode gameMode;
 
-  const GameScreen({super.key, required this.level, this.isRandom = false});
+  const GameScreen({
+    super.key,
+    required this.level,
+    this.isRandom = false,
+    this.gameMode = GameMode.classic,
+  });
 
   @override
   ConsumerState<GameScreen> createState() => _GameScreenState();
@@ -48,6 +55,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
   int _totalTime = 0;
   bool _isTimeoutState = false;
   bool _isAppBackgrounded = false;
+
+  int _timeAttackScore = 0;
+  bool _showBonusAnimation = false;
+  String _bonusText = '';
 
   @override
   void initState() {
@@ -153,8 +164,34 @@ class _GameScreenState extends ConsumerState<GameScreen>
     });
   }
 
+  void _triggerTimeAttackBonusAnimation() {
+    setState(() {
+      _bonusText = '+15s';
+      _showBonusAnimation = true;
+    });
+    Timer(const Duration(milliseconds: 900), () {
+      if (mounted) {
+        setState(() {
+          _showBonusAnimation = false;
+        });
+      }
+    });
+  }
+
+  void _goToNextLevelInPlace() {
+    final nextLevel = _level.levelNumber + 1;
+    setState(() {
+      _showingComplete = false;
+      _showingGameOver = false;
+      _showingDeadlock = false;
+      _inspectingDeadlock = false;
+      _loadedLevelNum = nextLevel;
+    });
+    _loadLevelAsync(nextLevel);
+  }
+
   void _initGame() {
-    _lives = AppConstants.maxLives;
+    _lives = widget.gameMode == GameMode.zen ? 999 : AppConstants.maxLives;
     _showingGameOver = false;
     _showingDeadlock = false;
     _inspectingDeadlock = false;
@@ -163,9 +200,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
       level: _level,
       theme: ref.read(progressRepositoryProvider).selectedTheme,
       onLevelComplete: _onLevelComplete,
-      onGameOver: _onGameOver,
-      onLifeLost: _onLifeLost,
+      onGameOver: widget.gameMode == GameMode.zen ? () {} : _onGameOver,
+      onLifeLost: widget.gameMode == GameMode.zen ? () {} : _onLifeLost,
       onDeadlock: _onDeadlock,
+      gameMode: widget.gameMode,
       onCombo: _triggerCombo,
       onCameraShake: _triggerShake,
       onParticleBurst: _addParticleBurst,
@@ -176,8 +214,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
       level: _level,
       gameState: _gameState!,
       onLevelComplete: _onLevelComplete,
-      onGameOver: _onGameOver,
-      onLifeLost: _onLifeLost,
+      onGameOver: widget.gameMode == GameMode.zen ? () {} : _onGameOver,
+      onLifeLost: widget.gameMode == GameMode.zen ? () {} : _onLifeLost,
     );
 
     _resetTimerForLevel();
@@ -203,7 +241,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final progress = ref.read(progressRepositoryProvider);
     final stars = ProgressRepository.calculateStars(_gameState!.livesLost);
 
-    if (!widget.isRandom) {
+    if (!widget.isRandom && widget.gameMode == GameMode.classic) {
       progress.recordLevelComplete(LevelResult(
         levelNumber: _level.levelNumber,
         stars: stars,
@@ -213,11 +251,24 @@ class _GameScreenState extends ConsumerState<GameScreen>
       ));
     }
 
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        _showLevelCompleteDialog(stars);
-      }
-    });
+    if (widget.gameMode == GameMode.timeAttack) {
+      setState(() {
+        _timeRemaining = (_timeRemaining + 15).clamp(0, 99);
+        _timeAttackScore++;
+      });
+      _triggerTimeAttackBonusAnimation();
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted) {
+          _goToNextLevelInPlace();
+        }
+      });
+    } else {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          _showLevelCompleteDialog(stars);
+        }
+      });
+    }
   }
 
   void _onGameOver() {
@@ -282,12 +333,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   void _handleNextLevel() {
     Navigator.pop(context);
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => GameScreen(level: _level.levelNumber + 1),
-      ),
-    );
+    _goToNextLevelInPlace();
   }
 
   void _handleMenu() {
@@ -316,6 +362,19 @@ class _GameScreenState extends ConsumerState<GameScreen>
     );
   }
 
+  Future<void> _handleTimeAttackRestart() async {
+    setState(() {
+      _showingGameOver = false;
+      _showingComplete = false;
+      _showingDeadlock = false;
+      _inspectingDeadlock = false;
+      _timeRemaining = 60;
+      _timeAttackScore = 0;
+      _loadedLevelNum = 1;
+    });
+    _loadLevelAsync(1);
+  }
+
   Future<void> _showGameOverDialog() async {
     final levelType = AppConstants.levelTypeFor(_level.levelNumber);
     final hasTimer = (levelType == LevelType.god && _level.levelNumber > 100) ||
@@ -336,6 +395,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
         level: _level,
         isTimeout: _isTimeoutState,
         continueTime: continueTime,
+        gameMode: widget.gameMode,
+        score: _timeAttackScore,
         onContinue: () {
           Navigator.pop(context);
           setState(() {
@@ -353,7 +414,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
         },
         onRestart: () {
           Navigator.pop(context);
-          _handleRestart();
+          if (widget.gameMode == GameMode.timeAttack) {
+            _handleTimeAttackRestart();
+          } else {
+            _handleRestart();
+          }
         },
         onMenu: () {
           Navigator.pop(context);
@@ -420,15 +485,26 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _levelTimer?.cancel();
     _isTimeoutState = false;
 
-    final levelType = AppConstants.levelTypeFor(_level.levelNumber);
-    final hasTimer = (levelType == LevelType.god && _level.levelNumber > 100) ||
-        (levelType == LevelType.boss && _level.levelNumber > 200);
-
-    if (hasTimer) {
-      _totalTime = _calculateLevelTimerDuration(
-          _level.levelNumber, _level.arrows.length);
-      _timeRemaining = _totalTime;
+    if (widget.gameMode == GameMode.timeAttack) {
+      if (_timeRemaining <= 0) {
+        _timeRemaining = 60;
+      }
+      _totalTime = 99;
       _startLevelTimer();
+    } else if (widget.gameMode == GameMode.classic) {
+      final levelType = AppConstants.levelTypeFor(_level.levelNumber);
+      final hasTimer = (levelType == LevelType.god && _level.levelNumber > 100) ||
+          (levelType == LevelType.boss && _level.levelNumber > 200);
+
+      if (hasTimer) {
+        _totalTime = _calculateLevelTimerDuration(
+            _level.levelNumber, _level.arrows.length);
+        _timeRemaining = _totalTime;
+        _startLevelTimer();
+      } else {
+        _totalTime = 0;
+        _timeRemaining = 0;
+      }
     } else {
       _totalTime = 0;
       _timeRemaining = 0;
@@ -507,13 +583,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     );
                   }
                 },
+                gameMode: widget.gameMode,
+                score: _timeAttackScore,
               ),
-              if (_totalTime > 0)
+              if (_totalTime > 0 || widget.gameMode == GameMode.timeAttack)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _TimerDisplay(
                     timeRemaining: _timeRemaining,
-                    totalTime: _totalTime,
+                    totalTime: widget.gameMode == GameMode.timeAttack ? 99 : _totalTime,
                   ),
                 ),
               Expanded(
@@ -595,6 +673,34 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                       end: const Offset(1.0, 1.0),
                                       duration: 100.ms),
                             ),
+                          if (_showBonusAnimation)
+                            Positioned(
+                              top: 60,
+                              child: Text(
+                                _bonusText,
+                                style: const TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.orangeAccent,
+                                  letterSpacing: 1.5,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black87,
+                                      blurRadius: 12,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                              )
+                                  .animate()
+                                  .fadeIn(duration: 200.ms)
+                                  .slideY(
+                                      begin: 0.5,
+                                      end: -0.2,
+                                      duration: 600.ms,
+                                      curve: Curves.easeOut)
+                                  .fadeOut(delay: 500.ms, duration: 300.ms),
+                            ),
                         ],
                       ),
                     );
@@ -604,6 +710,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
               _BottomBar(
                 lives: _lives,
                 progress: progressVal,
+                gameMode: widget.gameMode,
               ),
             ],
           ),
@@ -735,15 +842,30 @@ class _TopBar extends StatelessWidget {
   final LevelModel level;
   final bool isRandom;
   final VoidCallback onBack;
+  final GameMode gameMode;
+  final int score;
 
   const _TopBar({
     required this.level,
     this.isRandom = false,
     required this.onBack,
+    required this.gameMode,
+    this.score = 0,
   });
 
   @override
   Widget build(BuildContext context) {
+    String titleText;
+    if (gameMode == GameMode.timeAttack) {
+      titleText = 'Score: $score';
+    } else if (gameMode == GameMode.zen) {
+      titleText = gameMode.label;
+    } else if (isRandom) {
+      titleText = 'Random Mode';
+    } else {
+      titleText = '${gameMode.label} - Lvl ${level.levelNumber}';
+    }
+
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -764,15 +886,14 @@ class _TopBar extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (!isRandom)
-                  Text(
-                    'Level ${level.levelNumber}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.textPrimary,
-                    ),
+                Text(
+                  titleText,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textPrimary,
                   ),
+                ),
               ],
             ),
           ),
@@ -785,10 +906,12 @@ class _TopBar extends StatelessWidget {
 class _BottomBar extends StatelessWidget {
   final int lives;
   final double progress;
+  final GameMode gameMode;
 
   const _BottomBar({
     required this.lives,
     required this.progress,
+    required this.gameMode,
   });
 
   @override
@@ -811,7 +934,37 @@ class _BottomBar extends StatelessWidget {
               ),
             ),
           ),
-          LivesBar(lives: lives, maxLives: AppConstants.maxLives),
+          if (gameMode == GameMode.zen)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Colors.white, Color(0xFFB0B0B0)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ).createShader(bounds),
+                  child: const Icon(
+                    Icons.favorite,
+                    color: Colors.white,
+                    size: 25,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Text(
+                  '∞',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            )
+          else if (gameMode == GameMode.timeAttack)
+            const SizedBox()
+          else
+            LivesBar(lives: lives, maxLives: AppConstants.maxLives),
         ],
       ),
     );
@@ -964,6 +1117,8 @@ class _GameOverDialog extends StatelessWidget {
   final VoidCallback onContinue;
   final VoidCallback onRestart;
   final VoidCallback onMenu;
+  final GameMode gameMode;
+  final int score;
 
   const _GameOverDialog({
     required this.level,
@@ -972,10 +1127,14 @@ class _GameOverDialog extends StatelessWidget {
     required this.onContinue,
     required this.onRestart,
     required this.onMenu,
+    this.gameMode = GameMode.classic,
+    this.score = 0,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isTimeAttack = gameMode == GameMode.timeAttack;
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
@@ -994,19 +1153,38 @@ class _GameOverDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              isTimeout ? Icons.hourglass_top : Icons.heart_broken,
-              color: AppColors.accent,
+              isTimeAttack
+                  ? Icons.timer_off_rounded
+                  : (isTimeout ? Icons.hourglass_top : Icons.heart_broken),
+              color: isTimeAttack ? Colors.orangeAccent : AppColors.accent,
               size: 52,
             ).animate().shake(duration: 500.ms),
             const SizedBox(height: 12),
-            Text(isTimeout ? 'Out of Time!' : 'Out of Lives!',
+            Text(
+              isTimeAttack
+                  ? "Time's Up!"
+                  : (isTimeout ? 'Out of Time!' : 'Out of Lives!'),
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            if (isTimeAttack) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Puzzles Cleared: $score\nFinal Level: ${level.levelNumber}',
+                textAlign: TextAlign.center,
                 style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textPrimary)),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             _DialogButton(
-              label: 'Restart Level',
+              label: isTimeAttack ? 'Start New Run' : 'Restart Level',
               icon: Icons.refresh_rounded,
               textColor: AppColors.textPrimary,
               iconColor: AppColors.textPrimary,
@@ -1136,7 +1314,7 @@ class _DialogButton extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        AudioHapticHelper.playClick();
         onTap();
       },
       child: Container(

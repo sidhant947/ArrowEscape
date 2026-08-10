@@ -1,12 +1,14 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_themes.dart';
 import '../../core/constants.dart';
+import '../../core/audio_haptic_helper.dart';
+import '../../core/game_mode.dart';
 import '../../main.dart';
 import '../game/game_screen.dart';
 import '../level_select/level_select_screen.dart';
@@ -131,6 +133,127 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (mounted) setState(() => _isNavigating = false);
   }
 
+  void _showArcadeModesSelection(BuildContext context, int currentLevel) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'ARCADE MODES',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textPrimary,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ...[GameMode.zen, GameMode.timeAttack].map((mode) {
+                IconData icon;
+                Color color;
+                switch (mode) {
+                  case GameMode.zen:
+                    icon = Icons.spa;
+                    color = Colors.greenAccent;
+                    break;
+                  case GameMode.timeAttack:
+                    icon = Icons.timer;
+                    color = Colors.orangeAccent;
+                    break;
+                  default:
+                    icon = Icons.play_arrow;
+                    color = AppColors.primary;
+                }
+
+                return GestureDetector(
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    if (!mounted) return;
+                    setState(() => _isNavigating = true);
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GameScreen(
+                          level: mode == GameMode.timeAttack ? 1 : currentLevel,
+                          gameMode: mode,
+                        ),
+                      ),
+                    );
+                    if (mounted) setState(() => _isNavigating = false);
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white10, width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(icon, color: color, size: 24),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                mode.label.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.textPrimary,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                mode.description,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textMuted),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final progress = ref.watch(progressRepositoryProvider);
@@ -143,6 +266,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         elevation: 0,
+        leadingWidth: 110,
         leading: Align(
           alignment: Alignment.centerLeft,
           child: GestureDetector(
@@ -153,14 +277,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
             child: Container(
               margin: const EdgeInsets.only(left: 16),
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
                 color: AppColors.surface,
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(20),
               ),
-              alignment: Alignment.center,
-              child: const Icon(Icons.star, color: Colors.yellow, size: 22),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.star, color: Colors.yellow, size: 18),
+                  SizedBox(width: 4),
+                  Text(
+                    'Github',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -187,19 +323,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: GestureDetector(
               onTap: () async {
                 try {
-                  await launchUrl(Uri.parse('https://ko-fi.com/sidhant947'), mode: LaunchMode.externalApplication);
+                  await launchUrl(Uri.parse('https://liberapay.com/sidhant947'), mode: LaunchMode.externalApplication);
                 } catch (_) {}
               },
               child: Container(
                 margin: const EdgeInsets.only(right: 16),
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
                   color: AppColors.surface,
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                alignment: Alignment.center,
-                child: const Icon(Icons.favorite, color: Colors.pink, size: 22),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.favorite, color: Colors.pink, size: 18),
+                    SizedBox(width: 4),
+                    Text(
+                      'Support',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -212,26 +360,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               const Spacer(flex: 2),
 
-              const Icon(
+              Icon(
                 Icons.arrow_upward,
                 size: 48,
                 color: AppColors.textPrimary,
-              ),
+              ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+               .slideY(begin: 0, end: -0.15, duration: 1500.ms, curve: Curves.easeInOut)
+               .then()
+               .shimmer(duration: 1000.ms),
 
               const SizedBox(height: 20),
 
-              const FittedBox(
+              FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
                   AppConstants.appName,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.w900,
                     color: AppColors.textPrimary,
                     letterSpacing: 2,
                   ),
                 ),
-              ),
+              ).animate()
+               .fadeIn(duration: 800.ms)
+               .scale(begin: const Offset(0.9, 0.9), end: const Offset(1.0, 1.0), curve: Curves.easeOutBack),
 
               const SizedBox(height: 12),
 
@@ -243,60 +396,78 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   color: AppColors.textMuted,
                   letterSpacing: 2,
                 ),
-              ),
+              ).animate().fadeIn(delay: 300.ms, duration: 600.ms).slideY(begin: 0.5, end: 0),
 
               const Spacer(flex: 3),
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Column(
-                  children: [
-                    
-                    _MenuButton(
-                      label: 'PLAY',
-                      onTap: _isNavigating
-                          ? null
-                          : () async {
-                              if (!mounted) return;
-                              setState(() => _isNavigating = true);
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => GameScreen(level: progress.currentLevel),
-                                ),
-                              );
-                              if (mounted) setState(() => _isNavigating = false);
-                            },
-                      showBorder: false,
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    _MenuButton(
-                      label: 'LEVELS',
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
+                  children: AnimateList(
+                    interval: 100.ms,
+                    effects: [
+                      FadeEffect(duration: 500.ms),
+                      SlideEffect(begin: const Offset(0, 0.2), end: Offset.zero, curve: Curves.easeOutQuad),
+                    ],
+                    children: [
+                      _MenuButton(
+                        label: 'PLAY',
+                        onTap: _isNavigating
+                            ? null
+                            : () async {
+                                if (!mounted) return;
+                                setState(() => _isNavigating = true);
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => GameScreen(
+                                      level: progress.currentLevel,
+                                      gameMode: GameMode.classic,
+                                    ),
+                                  ),
+                                );
+                                if (mounted) setState(() => _isNavigating = false);
+                              },
+                        showBorder: false,
                       ),
-                    ),
 
-                    const SizedBox(height: 14),
+                      const SizedBox(height: 14),
 
-                    _MenuButton(
-                      label: 'RANDOM',
-                      onTap: _isNavigating ? null : _showRandomPuzzleDialog,
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    _MenuButton(
-                      label: 'SETTINGS',
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      _MenuButton(
+                        label: 'LEVELS',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
+                        ),
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(height: 14),
+
+                      _MenuButton(
+                        label: 'ARCADE MODES',
+                        onTap: _isNavigating
+                            ? null
+                            : () => _showArcadeModesSelection(context, progress.currentLevel),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      _MenuButton(
+                        label: 'RANDOM',
+                        onTap: _isNavigating ? null : _showRandomPuzzleDialog,
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      _MenuButton(
+                        label: 'SETTINGS',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -328,7 +499,7 @@ class _MenuButton extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         if (onTap != null) {
-          HapticFeedback.lightImpact();
+          AudioHapticHelper.playClick();
           onTap!();
         }
       },
@@ -381,7 +552,7 @@ class _DifficultyButton extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        AudioHapticHelper.playClick();
         onTap();
       },
       child: Container(
