@@ -863,7 +863,7 @@ class _TopBar extends StatelessWidget {
     } else if (isRandom) {
       titleText = 'Random Mode';
     } else {
-      titleText = '${gameMode.label} - Lvl ${level.levelNumber}';
+      titleText = 'Level ${level.levelNumber}';
     }
 
     return Container(

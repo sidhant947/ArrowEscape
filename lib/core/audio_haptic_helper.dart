@@ -1,31 +1,27 @@
 import 'package:flutter/services.dart';
 
 class AudioHapticHelper {
-  static bool soundEnabled = false;
   static bool hapticsEnabled = true;
 
+  static void init() {}
+
   static Future<void> playClick() async {
-    if (soundEnabled) {
-      await SystemSound.play(SystemSoundType.click);
-    }
     if (hapticsEnabled) {
       await HapticFeedback.selectionClick();
     }
   }
 
-  static Future<void> playSuccess() async {
-    if (soundEnabled) {
-      await SystemSound.play(SystemSoundType.click);
-    }
+  static Future<void> playSuccess({int combo = 1}) async {
     if (hapticsEnabled) {
-      await HapticFeedback.mediumImpact();
+      if (combo > 2) {
+        await HapticFeedback.heavyImpact();
+      } else {
+        await HapticFeedback.mediumImpact();
+      }
     }
   }
 
   static Future<void> playFailure() async {
-    if (soundEnabled) {
-      await SystemSound.play(SystemSoundType.alert);
-    }
     if (hapticsEnabled) {
       await HapticFeedback.heavyImpact();
     }

@@ -266,7 +266,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         elevation: 0,
-        leadingWidth: 110,
+        leadingWidth: 70,
         leading: Align(
           alignment: Alignment.centerLeft,
           child: GestureDetector(
@@ -277,26 +277,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
             child: Container(
               margin: const EdgeInsets.only(left: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.star, color: Colors.yellow, size: 18),
-                  SizedBox(width: 4),
-                  Text(
-                    'Github',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
+              child: const Icon(Icons.star, color: Colors.yellow, size: 18),
             ),
           ),
         ),
@@ -323,31 +309,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: GestureDetector(
               onTap: () async {
                 try {
-                  await launchUrl(Uri.parse('https://liberapay.com/sidhant947'), mode: LaunchMode.externalApplication);
+                  await launchUrl(Uri.parse('https://ko-fi.com/sidhant947'), mode: LaunchMode.externalApplication);
                 } catch (_) {}
               },
               child: Container(
                 margin: const EdgeInsets.only(right: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.favorite, color: Colors.pink, size: 18),
-                    SizedBox(width: 4),
-                    Text(
-                      'Support',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
+                child: const Icon(Icons.favorite, color: Colors.pink, size: 18),
               ),
             ),
           ),

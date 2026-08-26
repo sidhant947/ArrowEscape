@@ -48,6 +48,23 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               const SizedBox(height: 20),
               const Text(
+                'PREFERENCES',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildPreferenceTile(
+                title: 'HAPTIC FEEDBACK',
+                value: progress.hapticsEnabled,
+                onChanged: (_) => ref.read(progressRepositoryProvider).toggleHaptics(),
+                accentColor: themeColors.accentColor,
+              ),
+              const SizedBox(height: 24),
+              const Text(
                 'THEME & CUSTOM SKIN',
                 style: TextStyle(
                   fontSize: 16,
@@ -59,7 +76,11 @@ class SettingsScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               ...GameTheme.values.map((theme) {
                 final isSelected = progress.selectedTheme == theme;
-                final isLocked = theme != GameTheme.classic && !progress.skinsUnlocked;
+                final isDefaultUnlocked = theme == GameTheme.classic ||
+                    theme == GameTheme.neon ||
+                    theme == GameTheme.retro ||
+                    theme == GameTheme.cyber;
+                final isLocked = !isDefaultUnlocked && !progress.skinsUnlocked;
                 final previewColors = AppThemes.getThemeColors(theme);
                 return GestureDetector(
                   onTap: () {
@@ -135,30 +156,6 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 );
               }),
-              const SizedBox(height: 24),
-              const Text(
-                'PREFERENCES',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textSecondary,
-                  letterSpacing: 1.5,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildPreferenceTile(
-                title: 'SOUND EFFECTS',
-                value: progress.soundEnabled,
-                onChanged: (_) => ref.read(progressRepositoryProvider).toggleSound(),
-                accentColor: themeColors.accentColor,
-              ),
-              const SizedBox(height: 14),
-              _buildPreferenceTile(
-                title: 'HAPTIC FEEDBACK',
-                value: progress.hapticsEnabled,
-                onChanged: (_) => ref.read(progressRepositoryProvider).toggleHaptics(),
-                accentColor: themeColors.accentColor,
-              ),
             ],
           ),
         ),

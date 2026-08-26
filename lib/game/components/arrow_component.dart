@@ -118,7 +118,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     final result = gameState.tapArrow(arrowModel.id);
     switch (result) {
       case TapResult.exited:
-        AudioHapticHelper.playSuccess();
+        AudioHapticHelper.playSuccess(combo: gameState.comboCount);
         _startExitAnimation();
         break;
       case TapResult.blocked:

@@ -48,7 +48,7 @@ class AppConstants {
     } else if (level <= 100) {
       return 20 + ((level - 50) * 0.1).round();
     } else {
-      return 25 + ((level - 100) * 0.01).round().clamp(0, 5);
+      return (25 + ((level - 100) * 0.01).round()).clamp(25, 30);
     }
   }
 

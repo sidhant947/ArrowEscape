@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/app_colors.dart';
+import 'core/audio_haptic_helper.dart';
 import 'data/repositories/progress_repository.dart';
 import 'data/repositories/level_repository.dart';
 import 'screens/home/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AudioHapticHelper.init();
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
