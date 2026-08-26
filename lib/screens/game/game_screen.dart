@@ -264,6 +264,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
           _goToNextLevelInPlace();
         }
       });
+    } else if (widget.gameMode == GameMode.zen) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _goToNextLevelInPlace();
+        }
+      });
     } else {
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
