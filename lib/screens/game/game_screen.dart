@@ -137,11 +137,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   void _triggerCombo() {
     if (_gameState == null) return;
+    final combo = _gameState!.comboCount;
     _comboTimer?.cancel();
     setState(() {
-      _comboText = '${_gameState!.comboCount}x COMBO!';
+      _comboText = '$combo x COMBO';
     });
-    _comboTimer = Timer(const Duration(milliseconds: 1200), () {
+    _comboTimer = Timer(const Duration(milliseconds: 900), () {
       if (mounted) setState(() => _comboText = null);
     });
   }
@@ -149,14 +150,14 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void _addParticleBurst(Offset offset, Color color) {
     if (!mounted) return;
     final random = Random();
-    final newParticles = List.generate(14, (i) {
+    final newParticles = List.generate(18, (i) {
       final angle = random.nextDouble() * 2 * pi;
-      final speed = 80.0 + random.nextDouble() * 120.0;
+      final speed = 70.0 + random.nextDouble() * 150.0;
       return _Particle(
         position: offset,
         velocity: Offset(cos(angle) * speed, sin(angle) * speed),
         color: color,
-        maxLife: 0.4 + random.nextDouble() * 0.2,
+        maxLife: 0.35 + random.nextDouble() * 0.25,
       );
     });
     setState(() {
@@ -236,6 +237,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void _onLevelComplete() {
     if (!mounted || _showingComplete) return;
     _levelTimer?.cancel();
+    AudioHapticHelper.playSuccess(isLast: true);
     setState(() => _showingComplete = true);
 
     final progress = ref.read(progressRepositoryProvider);
@@ -587,11 +589,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 score: _timeAttackScore,
               ),
               if (_totalTime > 0 || widget.gameMode == GameMode.timeAttack)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _TimerDisplay(
-                    timeRemaining: _timeRemaining,
-                    totalTime: widget.gameMode == GameMode.timeAttack ? 99 : _totalTime,
+                RepaintBoundary(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _TimerDisplay(
+                      timeRemaining: _timeRemaining,
+                      totalTime: widget.gameMode == GameMode.timeAttack ? 99 : _totalTime,
+                    ),
                   ),
                 ),
               Expanded(
@@ -604,26 +608,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          ShaderMask(
-                            shaderCallback: (Rect bounds) {
-                              return const LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  Colors.black,
-                                  Colors.black,
-                                  Colors.transparent,
-                                ],
-                                stops: [
-                                  0.0,
-                                  0.08,
-                                  0.92,
-                                  1.0,
-                                ],
-                              ).createShader(bounds);
-                            },
-                            blendMode: BlendMode.dstIn,
+                          RepaintBoundary(
                             child: InteractiveViewer(
                               minScale: 0.8,
                               maxScale: 4.0,
@@ -638,40 +623,82 @@ class _GameScreenState extends ConsumerState<GameScreen>
                               ),
                             ),
                           ),
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: 24,
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      AppColors.background,
+                                      AppColors.background.withValues(alpha: 0.0),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            height: 24,
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.bottomCenter,
+                                    end: Alignment.topCenter,
+                                    colors: [
+                                      AppColors.background,
+                                      AppColors.background.withValues(alpha: 0.0),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                           if (_comboText != null)
                             Positioned(
                               top: 20,
-                              child: Text(
-                                _comboText!,
-                                style: const TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.primary,
-                                  letterSpacing: 1.5,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black87,
-                                      blurRadius: 12,
-                                      offset: Offset(0, 2),
-                                    ),
-                                    Shadow(
-                                      color: AppColors.primary,
-                                      blurRadius: 16,
-                                    ),
-                                  ],
-                                ),
-                              )
-                                  .animate()
-                                  .scale(
-                                      begin: const Offset(0.5, 0.5),
-                                      end: const Offset(1.15, 1.15),
-                                      duration: 200.ms,
-                                      curve: Curves.elasticOut)
-                                  .then()
-                                  .scale(
-                                      begin: const Offset(1.15, 1.15),
-                                      end: const Offset(1.0, 1.0),
-                                      duration: 100.ms),
+                              child: RepaintBoundary(
+                                child: Text(
+                                  _comboText!,
+                                  style: const TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppColors.primary,
+                                    letterSpacing: 1.5,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black87,
+                                        blurRadius: 12,
+                                        offset: Offset(0, 2),
+                                      ),
+                                      Shadow(
+                                        color: AppColors.primary,
+                                        blurRadius: 16,
+                                      ),
+                                    ],
+                                  ),
+                                )
+                                    .animate()
+                                    .scale(
+                                        begin: const Offset(0.5, 0.5),
+                                        end: const Offset(1.15, 1.15),
+                                        duration: 200.ms,
+                                        curve: Curves.elasticOut)
+                                    .then()
+                                    .scale(
+                                        begin: const Offset(1.15, 1.15),
+                                        end: const Offset(1.0, 1.0),
+                                        duration: 100.ms),
+                              ),
                             ),
                           if (_showBonusAnimation)
                             Positioned(

@@ -27,8 +27,7 @@ class LevelGenerator {
     
     final bool isLargeGrid = gridSize > 20;
     
-    final int maxAttempts =
-        isLargeGrid ? (type == LevelType.normal ? 150 : 200) : 120;
+    final int maxAttempts = isLargeGrid ? 25 : 20;
     for (int attempt = 0; attempt < maxAttempts && level == null; attempt++) {
       level = _attempt(
         levelNumber: levelNumber,
@@ -43,7 +42,7 @@ class LevelGenerator {
     }
 
     if (level != null && !isLargeGrid) {
-      final strictSolution = LevelSolver.solve(level, 10000);
+      final strictSolution = LevelSolver.solve(level, 3000);
       if (strictSolution == null) {
         level = null; 
       }
@@ -91,7 +90,7 @@ class LevelGenerator {
         fillRate = (1.0 - (attempt - 12) * 0.02).clamp(0.68, 0.95);
       }
       final targetOccupied = (mask.length * fillRate).round();
-      targetCount = (targetOccupied / params.avgLen).round().clamp(4, 300);
+      targetCount = (targetOccupied / params.avgLen).round().clamp(4, 800);
     }
 
     {
@@ -644,7 +643,7 @@ class LevelGenerator {
 
     final emptyCount = mask.length - occupied.length;
     const double maxOrphansPct = 0.26;
-    final maxOrphans = (mask.length * maxOrphansPct).ceil().clamp(5, 300);
+    final maxOrphans = (mask.length * maxOrphansPct).ceil().clamp(5, 800);
 
     if (fillEntireGrid && emptyCount > maxOrphans) {
       return null;
@@ -727,13 +726,27 @@ class LevelGenerator {
                   if (entry.value == OrphanDotType.neutral) continue;
                   final pk = entry.key;
                   final er = pk ~/ 1000, ec = pk % 1000;
-                  if ((er - nr).abs() + (ec - nc).abs() < 2) {
+                  if ((er - nr).abs() + (ec - nc).abs() < 3) {
                     tooClose = true;
                     break;
                   }
                 }
 
-                if (!tooClose) {
+                int redirectorChainCount = 0;
+                for (final val in orphanMap.values) {
+                  if (val != OrphanDotType.neutral) redirectorChainCount++;
+                }
+
+                final int maxRedirectorsForLevel;
+                if (levelNumber <= 30) {
+                  maxRedirectorsForLevel = 2;
+                } else if (levelNumber <= 100) {
+                  maxRedirectorsForLevel = 4;
+                } else {
+                  maxRedirectorsForLevel = 8;
+                }
+
+                if (!tooClose && redirectorChainCount < maxRedirectorsForLevel) {
                   final turns = rng.nextBool()
                       ? [currentDir.turnRight, currentDir.turnLeft]
                       : [currentDir.turnLeft, currentDir.turnRight];
@@ -756,13 +769,11 @@ class LevelGenerator {
                   }
 
                   if (!assigned) {
-                    
                     orphanMap[keyPacked] = _dotTypeForDir(currentDir);
                     final isSolvable =
                         _greedySolveWithMap(gridSize, arrows, orphanMap) !=
                             null;
                     if (!isSolvable) {
-                      
                       orphanMap[keyPacked] = OrphanDotType.neutral;
                     }
                   }
@@ -1060,8 +1071,13 @@ class LevelGenerator {
       avgLen = 2;
       arrowCount = 4;
     } else {
+      final int cyclePhase = (level - 1) % 5;
+      final bool isFlowLevel = cyclePhase == 4;
+
       if (level == 395 || level == 437) {
-        avgLen = 6; 
+        avgLen = 6;
+      } else if (isFlowLevel) {
+        avgLen = (gridSize > 20) ? 4 : 3;
       } else if (level <= 15) {
         avgLen = 3;
       } else if (level <= 50) {
@@ -1071,10 +1087,10 @@ class LevelGenerator {
       }
 
       final totalCells = mask.length;
-      const double fillRate = 1.0;
+      final double fillRate = isFlowLevel ? 0.88 : 1.0;
 
       final targetOccupiedCells = (totalCells * fillRate).round();
-      arrowCount = (targetOccupiedCells / avgLen).round().clamp(4, 300);
+      arrowCount = (targetOccupiedCells / avgLen).round().clamp(4, 800);
     }
 
     return _Params(arrowCount, avgLen);

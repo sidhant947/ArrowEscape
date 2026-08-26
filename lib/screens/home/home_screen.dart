@@ -54,8 +54,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       case 'hard':
         return AppConstants.randomHardMin +
             rng.nextInt(AppConstants.randomHardMax - AppConstants.randomHardMin + 1);
+      case 'master':
+        return AppConstants.randomMasterMin +
+            rng.nextInt(AppConstants.randomMasterMax - AppConstants.randomMasterMin + 1);
+      case 'expert':
+        return AppConstants.randomExpertMin +
+            rng.nextInt(AppConstants.randomExpertMax - AppConstants.randomExpertMin + 1);
       default:
-        return 1;
+        return 11;
     }
   }
 
@@ -66,53 +72,67 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Random Puzzle',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.textPrimary,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Random Puzzle',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Pick a difficulty',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
+                const SizedBox(height: 6),
+                const Text(
+                  'Pick a difficulty tier',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 28),
-              _DifficultyButton(
-                label: 'Easy',
-                icon: Icons.bolt,
-                onTap: () => _playRandom('easy'),
-              ),
-              const SizedBox(height: 12),
-              _DifficultyButton(
-                label: 'Medium',
-                icon: Icons.bolt,
-                onTap: () => _playRandom('medium'),
-              ),
-              const SizedBox(height: 12),
-              _DifficultyButton(
-                label: 'Hard',
-                icon: Icons.bolt,
-                onTap: () => _playRandom('hard'),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                const SizedBox(height: 20),
+                _DifficultyButton(
+                  label: 'Easy (11-50)',
+                  icon: Icons.bolt,
+                  onTap: () => _playRandom('easy'),
                 ),
-              ),
-            ],
+                const SizedBox(height: 10),
+                _DifficultyButton(
+                  label: 'Medium (51-150)',
+                  icon: Icons.speed,
+                  onTap: () => _playRandom('medium'),
+                ),
+                const SizedBox(height: 10),
+                _DifficultyButton(
+                  label: 'Hard (151-300)',
+                  icon: Icons.local_fire_department,
+                  onTap: () => _playRandom('hard'),
+                ),
+                const SizedBox(height: 10),
+                _DifficultyButton(
+                  label: 'Master (301-500)',
+                  icon: Icons.psychology,
+                  onTap: () => _playRandom('master'),
+                ),
+                const SizedBox(height: 10),
+                _DifficultyButton(
+                  label: 'Expert (500+)',
+                  icon: Icons.military_tech,
+                  onTap: () => _playRandom('expert'),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

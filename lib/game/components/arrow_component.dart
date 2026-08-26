@@ -26,6 +26,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   bool _isTouchDown = false;
   bool _isPreviewMode = false;
   List<Offset>? _previewPath;   
+  double _previewPulseTime = 0.0;   
 
   bool _isExiting = false;
   double _exitProgress = 0.0;
@@ -49,6 +50,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     _cachedTailDist = null;
     _cachedBodyPath = null;
     _cachedCaretPath = null;
+    _computeBounds();
   }
 
   bool _arePathsEqual(List<List<int>> a, List<List<int>> b) {
@@ -63,7 +65,9 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     required this.arrowModel,
     required this.cellSize,
     required this.gameState,
-  }) : super(size: Vector2.all(cellSize * gameState.level.gridSize));
+  }) : super(size: Vector2.all(cellSize * gameState.level.gridSize)) {
+    _computeBounds();
+  }
 
   void updateCellSize(double newSize) {
     cellSize = newSize;
@@ -71,11 +75,32 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     _invalidateCache();
   }
 
+  int _minR = 0, _maxR = 0, _minC = 0, _maxC = 0;
+
+  void _computeBounds() {
+    if (arrowModel.path.isEmpty) return;
+    _minR = arrowModel.path[0][0];
+    _maxR = _minR;
+    _minC = arrowModel.path[0][1];
+    _maxC = _minC;
+    for (int i = 1; i < arrowModel.path.length; i++) {
+      final r = arrowModel.path[i][0];
+      final c = arrowModel.path[i][1];
+      if (r < _minR) _minR = r;
+      if (r > _maxR) _maxR = r;
+      if (c < _minC) _minC = c;
+      if (c > _maxC) _maxC = c;
+    }
+  }
+
   @override
   bool containsLocalPoint(Vector2 point) {
     if (_isExiting) return false;
     final col = (point.x / cellSize).floor();
     final row = (point.y / cellSize).floor();
+    if (row < _minR || row > _maxR || col < _minC || col > _maxC) {
+      return false;
+    }
     return arrowModel.path.any((pt) => pt[0] == row && pt[1] == col);
   }
 
@@ -292,15 +317,35 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
         _previewPath = _buildPreviewPath();
         AudioHapticHelper.playClick();
       }
+      if (_isPreviewMode) {
+        _previewPulseTime += dt * 4.0;
+      }
+    } else {
+      _previewPulseTime = 0.0;
     }
 
     if (_isExiting) {
       _exitProgress += dt / _exitDuration;
+      final themeColors = AppThemes.getThemeColors(gameState.theme);
+
+      if (_exitProgress > 0.05 && _exitProgress < 0.95) {
+        if (_cachedTrack != null && _cachedDist != null && _cachedTailDist != null) {
+          final traveled = (_exitProgress * _cachedTailDist!).clamp(0.0, _cachedTailDist!);
+          final animTail = (_cachedTailDist! - traveled).clamp(0.0, _cachedTailDist!);
+          final tailSlice = _slice(_cachedTrack!, _cachedDist!, animTail, animTail);
+          if (tailSlice.isNotEmpty) {
+            gameState.onParticleBurst?.call(tailSlice.first, themeColors.accentColor);
+          }
+        }
+      }
+
       if (_exitProgress >= 1.0) {
         final head = arrowModel.path[0];
         final centerOffset = Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
-        final color = AppColors.primary;
-        gameState.onParticleBurst?.call(centerOffset, color);
+        final color = themeColors.accentColor;
+        for (int b = 0; b < 2; b++) {
+          gameState.onParticleBurst?.call(centerOffset, color);
+        }
         removeFromParent();
         gameState.handleArrowExitCompleted(arrowModel.id);
         return;
@@ -309,13 +354,13 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
     if (_isBlockedAnimating) {
       _blockTime += dt;
-      final half = _blockDuration / 2;
+      final half = _blockDuration * 0.4;
       if (_blockTime < half) {
         final t = _blockTime / half;
-        _slideOffset = Curves.easeOut.transform(t) * _maxBlockSlide;
+        _slideOffset = Curves.easeOutBack.transform(t) * _maxBlockSlide;
       } else if (_blockTime < _blockDuration) {
-        final t = (_blockTime - half) / half;
-        _slideOffset = (1.0 - Curves.easeIn.transform(t)) * _maxBlockSlide;
+        final t = (_blockTime - half) / (_blockDuration - half);
+        _slideOffset = (1.0 - Curves.elasticOut.transform(t)) * _maxBlockSlide;
       } else {
         _slideOffset = 0.0;
         _isBlockedAnimating = false;
@@ -617,12 +662,14 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
         ? const Color(0xFF606060)
         : Colors.white;
 
+    final double pulse = 0.85 + 0.15 * (1.0 + (0.5 * _previewPulseTime).abs());
+
     canvas.drawPath(
       rawPath,
       Paint()
-        ..color = shadowColor.withValues(alpha: 0.35)
+        ..color = shadowColor.withValues(alpha: (0.35 * pulse).clamp(0.1, 0.6))
         ..style = PaintingStyle.stroke
-        ..strokeWidth = cellSize * 0.45 
+        ..strokeWidth = cellSize * 0.45 * pulse
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6.0),

@@ -11,19 +11,23 @@ class AudioHapticHelper {
     }
   }
 
-  static Future<void> playSuccess({int combo = 1}) async {
-    if (hapticsEnabled) {
-      if (combo > 2) {
-        await HapticFeedback.heavyImpact();
-      } else {
-        await HapticFeedback.mediumImpact();
-      }
+  static Future<void> playSuccess({int combo = 1, bool isLast = false}) async {
+    if (!hapticsEnabled) return;
+    if (isLast) {
+      await HapticFeedback.heavyImpact();
+      Future.delayed(const Duration(milliseconds: 120), () => HapticFeedback.mediumImpact());
+    } else if (combo >= 4) {
+      await HapticFeedback.heavyImpact();
+    } else if (combo >= 2) {
+      await HapticFeedback.mediumImpact();
+    } else {
+      await HapticFeedback.lightImpact();
     }
   }
 
   static Future<void> playFailure() async {
     if (hapticsEnabled) {
-      await HapticFeedback.heavyImpact();
+      await HapticFeedback.vibrate();
     }
   }
 }

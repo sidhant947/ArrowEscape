@@ -30,25 +30,27 @@ class AppConstants {
     final type = levelTypeFor(level);
 
     if (type == LevelType.god) {
-      final cycle = godCycleCount(level);
-      final raw = 25 + ((cycle - 1) * (15.0 / 15.0)).round();
-      return raw.clamp(25, 40);
+      final raw = 22 + ((level / 50.0) * 1.2).round();
+      return raw.clamp(22, 32);
     }
 
     if (type == LevelType.boss) {
-      final cycle = bossCycleCount(level);
-      final raw = 20 + ((cycle - 1) * (15.0 / 15.0)).round();
-      return raw.clamp(20, 35);
+      final raw = 20 + ((level / 50.0) * 1.2).round();
+      return raw.clamp(20, 30);
     }
 
     if (level <= 10) {
       return 10 + ((level - 1) * 0.44).round();
     } else if (level <= 50) {
       return 14 + ((level - 10) * 0.15).round();
-    } else if (level <= 100) {
-      return 20 + ((level - 50) * 0.1).round();
+    } else if (level <= 150) {
+      return 20 + ((level - 50) * 0.05).round();
+    } else if (level <= 300) {
+      return 25 + ((level - 150) * 0.03).round();
+    } else if (level <= 500) {
+      return 29 + ((level - 300) * 0.01).round();
     } else {
-      return (25 + ((level - 100) * 0.01).round()).clamp(25, 30);
+      return 32;
     }
   }
 
@@ -66,12 +68,16 @@ class AppConstants {
     }
   }
 
-  static const int randomEasyMin = 1;
-  static const int randomEasyMax = 10;
-  static const int randomMediumMin = 30;
-  static const int randomMediumMax = 50;
-  static const int randomHardMin = 80;
-  static const int randomHardMax = 100;
+  static const int randomEasyMin = 11;
+  static const int randomEasyMax = 50;
+  static const int randomMediumMin = 51;
+  static const int randomMediumMax = 150;
+  static const int randomHardMin = 151;
+  static const int randomHardMax = 300;
+  static const int randomMasterMin = 301;
+  static const int randomMasterMax = 500;
+  static const int randomExpertMin = 501;
+  static const int randomExpertMax = 700;
 }
 
 enum LevelType {

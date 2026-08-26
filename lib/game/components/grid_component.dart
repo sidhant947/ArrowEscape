@@ -117,6 +117,12 @@ class GridComponent extends PositionComponent {
     _cachedDotGridPicture = recorder.endRecording();
   }
 
+  final List<_Shockwave> _shockwaves = [];
+
+  void addShockwave(Offset center, Color color) {
+    _shockwaves.add(_Shockwave(center: center, color: color));
+  }
+
   @override
   void render(Canvas canvas) {
     final cs = cellSize;
@@ -125,6 +131,10 @@ class GridComponent extends PositionComponent {
       _recacheDotGrid();
     }
     canvas.drawPicture(_cachedDotGridPicture!);
+
+    for (final sw in _shockwaves) {
+      sw.render(canvas, cs);
+    }
 
     final themeColors = AppThemes.getThemeColors(gameState.theme);
     final orphanDots = gameState.orphanDots;
@@ -201,6 +211,12 @@ class GridComponent extends PositionComponent {
   @override
   void update(double dt) {
     super.update(dt);
+    for (int i = _shockwaves.length - 1; i >= 0; i--) {
+      _shockwaves[i].update(dt);
+      if (_shockwaves[i].isFinished) {
+        _shockwaves.removeAt(i);
+      }
+    }
     if (!_entryCompleted) {
       _entryTime += dt;
       if (_entryTime >= 0.5) {
@@ -221,5 +237,33 @@ class GridComponent extends PositionComponent {
         _arrowComponents.remove(id);
       }
     }
+  }
+}
+
+class _Shockwave {
+  final Offset center;
+  final Color color;
+  double progress = 0.0;
+  final double duration = 0.35;
+
+  _Shockwave({required this.center, required this.color});
+
+  bool get isFinished => progress >= 1.0;
+
+  void update(double dt) {
+    progress += dt / duration;
+  }
+
+  void render(Canvas canvas, double cs) {
+    final t = progress.clamp(0.0, 1.0);
+    final radius = cs * (0.3 + 1.2 * t);
+    final alpha = (1.0 - t).clamp(0.0, 1.0);
+
+    final paint = Paint()
+      ..color = color.withValues(alpha: alpha * 0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = cs * 0.08 * (1.0 - t * 0.5);
+
+    canvas.drawCircle(center, radius, paint);
   }
 }
