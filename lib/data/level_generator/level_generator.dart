@@ -632,7 +632,7 @@ class LevelGenerator {
       }
 
     if (occupied.length < mask.length) {
-      _absorbOrphans(arrows, occupied, occupiedPacked, mask);
+      _absorbOrphans(arrows, occupied, occupiedPacked, mask, gridSize);
     }
 
     if (arrows.isEmpty) return null;
@@ -1282,44 +1282,51 @@ class LevelGenerator {
   }
 
   static void _absorbOrphans(List<ArrowModel> arrows, Set<String> occupied,
-      Set<int> occupiedPacked, Set<String> mask) {
-    final orphans = mask.where((k) => !occupied.contains(k)).toList();
-    for (final cellKey in orphans) {
-      final parts = cellKey.split(',');
-      final r = int.parse(parts[0]), c = int.parse(parts[1]);
+      Set<int> occupiedPacked, Set<String> mask, int gridSize) {
+    bool madeProgress = true;
+    while (madeProgress) {
+      madeProgress = false;
+      final orphans = mask.where((k) => !occupied.contains(k)).toList();
+      for (final cellKey in orphans) {
+        final parts = cellKey.split(',');
+        final r = int.parse(parts[0]), c = int.parse(parts[1]);
 
-      for (int i = 0; i < arrows.length; i++) {
-        final arrow = arrows[i];
-        final tail = arrow.path.last;
-        final dist = (tail[0] - r).abs() + (tail[1] - c).abs();
-        if (dist == 1) {
-          
-          bool wouldFormLoop = false;
-          if (arrow.path.length >= 3) {
-            for (final nb in [
-              [-1, 0],
-              [1, 0],
-              [0, -1],
-              [0, 1]
-            ]) {
-              final adjR = r + nb[0], adjC = c + nb[1];
-              if (adjR == tail[0] && adjC == tail[1]) continue;
-              for (final pt in arrow.path) {
-                if (pt[0] == adjR && pt[1] == adjC) {
-                  wouldFormLoop = true;
-                  break;
+        for (int i = 0; i < arrows.length; i++) {
+          final arrow = arrows[i];
+          final tail = arrow.path.last;
+          final dist = (tail[0] - r).abs() + (tail[1] - c).abs();
+          if (dist == 1) {
+            final exitPath = _getExitPathPacked(arrow.path[0][0], arrow.path[0][1], arrow.direction, gridSize);
+            if (exitPath.contains(r * 1000 + c)) continue;
+
+            bool wouldFormLoop = false;
+            if (arrow.path.length >= 3) {
+              for (final nb in [
+                [-1, 0],
+                [1, 0],
+                [0, -1],
+                [0, 1]
+              ]) {
+                final adjR = r + nb[0], adjC = c + nb[1];
+                if (adjR == tail[0] && adjC == tail[1]) continue;
+                for (final pt in arrow.path) {
+                  if (pt[0] == adjR && pt[1] == adjC) {
+                    wouldFormLoop = true;
+                    break;
+                  }
                 }
+                if (wouldFormLoop) break;
               }
-              if (wouldFormLoop) break;
             }
-          }
-          if (wouldFormLoop) continue;
+            if (wouldFormLoop) continue;
 
-          final newPath = List<List<int>>.from(arrow.path)..add([r, c]);
-          arrows[i] = arrow.copyWith(path: newPath);
-          occupied.add(cellKey);
-          occupiedPacked.add(r * 1000 + c);
-          break;
+            final newPath = List<List<int>>.from(arrow.path)..add([r, c]);
+            arrows[i] = arrow.copyWith(path: newPath);
+            occupied.add(cellKey);
+            occupiedPacked.add(r * 1000 + c);
+            madeProgress = true;
+            break;
+          }
         }
       }
     }

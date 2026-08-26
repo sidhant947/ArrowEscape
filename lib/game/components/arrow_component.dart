@@ -186,7 +186,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
     if (!hasDeflection) return null;
 
-    for (int i = 0; i <= 5; i++) {
+    final int exitExtCount = gridSize + 5;
+    for (int i = 0; i <= exitExtCount; i++) {
       pts.add(Offset((nc + d[1] * i + 0.5) * cellSize,
                      (nr + d[0] * i + 0.5) * cellSize));
     }
