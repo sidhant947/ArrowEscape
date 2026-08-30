@@ -24,7 +24,7 @@ class GameState extends ChangeNotifier {
   final void Function() onLevelComplete;
   final void Function() onGameOver;
   final void Function() onLifeLost;
-  final void Function() onDeadlock;
+  final void Function()? onDeadlock;
   final void Function()? onCombo;
   final void Function(Offset globalPos, Color color)? onParticleBurst;
   final void Function()? onCameraShake;
@@ -40,7 +40,7 @@ class GameState extends ChangeNotifier {
     required this.onLevelComplete,
     required this.onGameOver,
     required this.onLifeLost,
-    required this.onDeadlock,
+    this.onDeadlock,
     this.gameMode = GameMode.classic,
     this.onCombo,
     this.onParticleBurst,
@@ -72,7 +72,7 @@ class GameState extends ChangeNotifier {
     } else {
       if (checkDeadlock()) {
         _isDeadlocked = true;
-        onDeadlock();
+        onDeadlock?.call();
       }
     }
     notifyListeners();

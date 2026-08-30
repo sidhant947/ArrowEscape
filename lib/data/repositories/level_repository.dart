@@ -12,6 +12,8 @@ LevelModel generateLevelIsolate(int levelNumber) {
 }
 
 class LevelRepository {
+  static const int cacheVersion = LevelModel.currentVersion;
+
   late Box _cacheBox;
   final Map<int, LevelModel> _cache = {};
   final Set<int> _generating = {};
@@ -26,21 +28,42 @@ class LevelRepository {
 
   Future<void> _init() async {
     _cacheBox = await Hive.openBox('levelCache');
+    final storedVersion = _cacheBox.get('generator_version');
+    if (storedVersion != cacheVersion) {
+      await _cacheBox.clear();
+      await _cacheBox.put('generator_version', cacheVersion);
+    }
   }
 
-  LevelModel getLevel(int levelNumber) {
-    if (_cache.containsKey(levelNumber)) return _cache[levelNumber]!;
+  LevelModel? _tryLoadCached(int levelNumber) {
+    if (_cache.containsKey(levelNumber)) {
+      final cached = _cache[levelNumber]!;
+      if (cached.version == cacheVersion) return cached;
+      _cache.remove(levelNumber);
+    }
 
     final jsonStr = _cacheBox.get('cached_level_$levelNumber');
     if (jsonStr != null) {
       try {
-        final level = LevelModel.fromJson(jsonDecode(jsonStr));
-        _cache[levelNumber] = level;
-        return level;
+        final decoded = jsonDecode(jsonStr);
+        if (decoded is Map<String, dynamic>) {
+          final level = LevelModel.fromJson(decoded);
+          if (level.version == cacheVersion) {
+            _cache[levelNumber] = level;
+            return level;
+          }
+        }
       } catch (e) {
         debugPrint('Error decoding cached level: $e');
       }
+      _cacheBox.delete('cached_level_$levelNumber');
     }
+    return null;
+  }
+
+  LevelModel getLevel(int levelNumber) {
+    final cached = _tryLoadCached(levelNumber);
+    if (cached != null) return cached;
 
     final level = LevelGenerator.generateLevel(levelNumber);
     _cache[levelNumber] = level;
@@ -54,12 +77,8 @@ class LevelRepository {
     _generating.add(levelNumber);
 
     try {
-      final jsonStr = _cacheBox.get('cached_level_$levelNumber');
-      if (jsonStr != null) {
-        final level = LevelModel.fromJson(jsonDecode(jsonStr));
-        _cache[levelNumber] = level;
-        return;
-      }
+      final cached = _tryLoadCached(levelNumber);
+      if (cached != null) return;
 
       final level = await compute(generateLevelIsolate, levelNumber)
           .timeout(const Duration(seconds: 4));
@@ -83,16 +102,8 @@ class LevelRepository {
       preGenerateRangeAsync(levelNumber + 1, 3);
     }
 
-    if (_cache.containsKey(levelNumber)) return _cache[levelNumber]!;
-
-    final jsonStr = _cacheBox.get('cached_level_$levelNumber');
-    if (jsonStr != null) {
-      try {
-        final level = LevelModel.fromJson(jsonDecode(jsonStr));
-        _cache[levelNumber] = level;
-        return level;
-      } catch (_) {}
-    }
+    final cached = _tryLoadCached(levelNumber);
+    if (cached != null) return cached;
 
     try {
       final level = await compute(generateLevelIsolate, levelNumber)
@@ -107,11 +118,7 @@ class LevelRepository {
   }
 
   bool isCached(int levelNumber) {
-    if (_cache.containsKey(levelNumber)) return true;
-    if (_cacheBox.containsKey('cached_level_$levelNumber')) {
-      return true;
-    }
-    return false;
+    return _tryLoadCached(levelNumber) != null;
   }
 
   void _saveToDisk(int levelNumber, LevelModel level) {

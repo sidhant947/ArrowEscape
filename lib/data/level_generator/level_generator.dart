@@ -755,7 +755,7 @@ class LevelGenerator {
                   for (final candDir in turns) {
                     orphanMap[keyPacked] = _dotTypeForDir(candDir);
 
-                    final isSolvable =
+                    final isSolvable = _isValidRedirectorMap(orphanMap, gridSize, arrows) &&
                         _greedySolveWithMap(gridSize, arrows, orphanMap) !=
                             null;
 
@@ -770,7 +770,7 @@ class LevelGenerator {
 
                   if (!assigned) {
                     orphanMap[keyPacked] = _dotTypeForDir(currentDir);
-                    final isSolvable =
+                    final isSolvable = _isValidRedirectorMap(orphanMap, gridSize, arrows) &&
                         _greedySolveWithMap(gridSize, arrows, orphanMap) !=
                             null;
                     if (!isSolvable) {
@@ -818,6 +818,10 @@ class LevelGenerator {
           type: entry.value,
         ));
         occupied.add('$r,$c');
+      }
+
+      if (!_isValidRedirectorMap(orphanMap, gridSize, arrows)) {
+        return null;
       }
     }
 
@@ -1060,6 +1064,99 @@ class LevelGenerator {
       case ArrowDirection.right:
         return OrphanDotType.right;
     }
+  }
+
+  static ArrowDirection _dirForDotType(OrphanDotType type) {
+    switch (type) {
+      case OrphanDotType.up:
+        return ArrowDirection.up;
+      case OrphanDotType.down:
+        return ArrowDirection.down;
+      case OrphanDotType.left:
+        return ArrowDirection.left;
+      case OrphanDotType.right:
+        return ArrowDirection.right;
+      default:
+        return ArrowDirection.up;
+    }
+  }
+
+  static bool _hasRedirectorCycle(
+      Map<int, OrphanDotType> orphanMap, int gridSize) {
+    for (final entry in orphanMap.entries) {
+      if (entry.value == OrphanDotType.neutral) continue;
+      final startPacked = entry.key;
+      int r = startPacked ~/ 1000;
+      int c = startPacked % 1000;
+      ArrowDirection dir = _dirForDotType(entry.value);
+
+      final visited = <int>{startPacked};
+      int steps = 0;
+      final maxSteps = gridSize * gridSize;
+
+      while (true) {
+        final d = dir.delta;
+        r += d[0];
+        c += d[1];
+        if (r < 0 || r >= gridSize || c < 0 || c >= gridSize) {
+          break;
+        }
+        steps++;
+        if (steps > maxSteps) return true;
+
+        final packed = r * 1000 + c;
+        final nextType = orphanMap[packed];
+        if (nextType != null && nextType != OrphanDotType.neutral) {
+          if (visited.contains(packed)) {
+            return true;
+          }
+          visited.add(packed);
+          dir = _dirForDotType(nextType);
+        }
+      }
+    }
+    return false;
+  }
+
+  static bool _arrowHitsOwnBody(
+      ArrowModel arrow, Map<int, OrphanDotType> orphanMap, int gridSize) {
+    ArrowDirection currentDir = arrow.direction;
+    final head = arrow.path[0];
+    var d = currentDir.delta;
+    int nr = head[0] + d[0];
+    int nc = head[1] + d[1];
+    final visited = <int>{};
+
+    while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+      final keyPacked = nr * 1000 + nc;
+      if (visited.contains(keyPacked)) return true;
+      visited.add(keyPacked);
+
+      for (int i = 1; i < arrow.path.length; i++) {
+        if (nr == arrow.path[i][0] && nc == arrow.path[i][1]) {
+          return true;
+        }
+      }
+
+      final dotType = orphanMap[keyPacked];
+      if (dotType != null && dotType != OrphanDotType.neutral) {
+        currentDir = _dirForDotType(dotType);
+      }
+
+      d = currentDir.delta;
+      nr += d[0];
+      nc += d[1];
+    }
+    return false;
+  }
+
+  static bool _isValidRedirectorMap(
+      Map<int, OrphanDotType> orphanMap, int gridSize, List<ArrowModel> arrows) {
+    if (_hasRedirectorCycle(orphanMap, gridSize)) return false;
+    for (final a in arrows) {
+      if (_arrowHitsOwnBody(a, orphanMap, gridSize)) return false;
+    }
+    return true;
   }
 
   static _Params _paramsFor(

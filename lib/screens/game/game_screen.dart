@@ -44,8 +44,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
   GameState? _gameState;
   bool _showingGameOver = false;
   bool _showingComplete = false;
-  bool _showingDeadlock = false;
-  bool _inspectingDeadlock = false;
   int _lives = AppConstants.maxLives;
   int? _loadedLevelNum;
   bool _isLoadingLevel = false;
@@ -184,8 +182,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     setState(() {
       _showingComplete = false;
       _showingGameOver = false;
-      _showingDeadlock = false;
-      _inspectingDeadlock = false;
       _loadedLevelNum = nextLevel;
     });
     _loadLevelAsync(nextLevel);
@@ -194,8 +190,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void _initGame() {
     _lives = widget.gameMode == GameMode.zen ? 999 : AppConstants.maxLives;
     _showingGameOver = false;
-    _showingDeadlock = false;
-    _inspectingDeadlock = false;
     _gameState?.removeListener(_onGameStateChanged);
     _gameState = GameState(
       level: _level,
@@ -203,7 +197,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
       onLevelComplete: _onLevelComplete,
       onGameOver: widget.gameMode == GameMode.zen ? () {} : _onGameOver,
       onLifeLost: widget.gameMode == GameMode.zen ? () {} : _onLifeLost,
-      onDeadlock: _onDeadlock,
       gameMode: widget.gameMode,
       onCombo: _triggerCombo,
       onCameraShake: _triggerShake,
@@ -287,51 +280,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
     });
   }
 
-  void _onDeadlock() {
-    if (!mounted || _showingDeadlock || _showingGameOver || _showingComplete) {
-      return;
-    }
-    _levelTimer?.cancel();
-    setState(() {
-      _showingDeadlock = true;
-      _inspectingDeadlock = false;
-    });
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) _showDeadlockDialog();
-    });
-  }
-
-  Future<void> _showDeadlockDialog() async {
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _DeadlockDialog(
-        level: _level,
-        onRestart: () {
-          Navigator.pop(context);
-          _handleRestart();
-        },
-        onMenu: () {
-          Navigator.pop(context);
-          _handleMenu();
-        },
-        onInspect: () {
-          Navigator.pop(context);
-          setState(() {
-            _inspectingDeadlock = true;
-          });
-        },
-      ),
-    );
-  }
-
   Future<void> _handleRestart() async {
     if (mounted) {
       setState(() {
         _showingGameOver = false;
         _showingComplete = false;
-        _showingDeadlock = false;
-        _inspectingDeadlock = false;
         _game.resetLevel();
         _lives = AppConstants.maxLives;
         _resetTimerForLevel();
@@ -374,8 +327,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     setState(() {
       _showingGameOver = false;
       _showingComplete = false;
-      _showingDeadlock = false;
-      _inspectingDeadlock = false;
       _timeRemaining = 60;
       _timeAttackScore = 0;
       _loadedLevelNum = 1;
@@ -555,6 +506,23 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _gameState?.forceGameOver();
   }
 
+  void _showJumpToLevelDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => _JumpToLevelDialog(
+        initialLevel: _level.levelNumber,
+        onSelectLevel: (lvl) {
+          setState(() {
+            _showingComplete = false;
+            _showingGameOver = false;
+            _loadedLevelNum = lvl;
+          });
+          _loadLevelAsync(lvl);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final progressState = ref.watch(progressRepositoryProvider);
@@ -593,6 +561,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 },
                 gameMode: widget.gameMode,
                 score: _timeAttackScore,
+                onLevelTap: widget.gameMode == GameMode.classic && !widget.isRandom
+                    ? _showJumpToLevelDialog
+                    : null,
               ),
               if (_totalTime > 0 || widget.gameMode == GameMode.timeAttack)
                 RepaintBoundary(
@@ -749,25 +720,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
           ),
         ),
       ),
-      floatingActionButton: _inspectingDeadlock
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                setState(() {
-                  _inspectingDeadlock = false;
-                });
-                _showDeadlockDialog();
-              },
-              backgroundColor: AppColors.primary,
-              icon: const Icon(Icons.menu, color: Colors.white),
-              label: const Text(
-                'Deadlock Options',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                ),
-              ),
-            )
-          : null,
     );
   }
 
@@ -877,6 +829,7 @@ class _TopBar extends StatelessWidget {
   final VoidCallback onBack;
   final GameMode gameMode;
   final int score;
+  final VoidCallback? onLevelTap;
 
   const _TopBar({
     required this.level,
@@ -884,6 +837,7 @@ class _TopBar extends StatelessWidget {
     required this.onBack,
     required this.gameMode,
     this.score = 0,
+    this.onLevelTap,
   });
 
   @override
@@ -916,18 +870,21 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  titleText,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textPrimary,
+            child: GestureDetector(
+              onTap: onLevelTap,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    titleText,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -1238,93 +1195,6 @@ class _GameOverDialog extends StatelessWidget {
   }
 }
 
-class _DeadlockDialog extends StatelessWidget {
-  final LevelModel level;
-  final VoidCallback onRestart;
-  final VoidCallback onMenu;
-  final VoidCallback onInspect;
-
-  const _DeadlockDialog({
-    required this.level,
-    required this.onRestart,
-    required this.onMenu,
-    required this.onInspect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: AppColors.surfaceLight, width: 3),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.15),
-              blurRadius: 32,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.warning,
-              color: AppColors.accentOrange,
-              size: 52,
-            ).animate().shake(duration: 600.ms),
-            const SizedBox(height: 12),
-            const Text(
-              'Deadlock Reached!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'All remaining arrows are blocked. This can happen if they are cleared in the wrong sequence.\n\n💡 Hint: Try to trace the paths and see which arrows must escape first to clear the way for others!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 28),
-            _DialogButton(
-              label: 'Restart Level',
-              icon: Icons.refresh_rounded,
-              onTap: onRestart,
-            ),
-            const SizedBox(height: 10),
-            _DialogButton(
-              label: 'Inspect Board',
-              icon: Icons.visibility,
-              textColor: AppColors.textPrimary,
-              iconColor: AppColors.textPrimary,
-              onTap: onInspect,
-            ),
-            const SizedBox(height: 10),
-            _DialogButton(
-              label: 'Home',
-              icon: Icons.home_rounded,
-              textColor: AppColors.textPrimary,
-              iconColor: AppColors.textPrimary,
-              onTap: onMenu,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _DialogButton extends ConsumerWidget {
   final String label;
   final IconData icon;
@@ -1422,7 +1292,7 @@ class _BouncingDotsState extends State<_BouncingDots>
       children: List.generate(3, (i) {
         return AnimatedBuilder(
           animation: _ctrl,
-          builder: (_, __) {
+          builder: (context, child) {
             final phase = (_ctrl.value + i * 0.33) % 1.0;
             final t = (1 - (phase * 2 - 1).abs()).clamp(0.0, 1.0);
             return Transform.translate(
@@ -1479,4 +1349,152 @@ class _Particle {
     required this.color,
     required this.maxLife,
   });
+}
+
+class _JumpToLevelDialog extends StatefulWidget {
+  final int initialLevel;
+  final void Function(int level) onSelectLevel;
+
+  const _JumpToLevelDialog({
+    required this.initialLevel,
+    required this.onSelectLevel,
+  });
+
+  @override
+  State<_JumpToLevelDialog> createState() => _JumpToLevelDialogState();
+}
+
+class _JumpToLevelDialogState extends State<_JumpToLevelDialog> {
+  late final TextEditingController _controller;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialLevel.toString());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final text = _controller.text.trim();
+    final lvl = int.tryParse(text);
+    if (lvl == null || lvl < 1) {
+      setState(() {
+        _error = 'Please enter a valid level (>= 1)';
+      });
+      return;
+    }
+    Navigator.pop(context);
+    widget.onSelectLevel(lvl);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Select Level',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Enter a level number to play',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _controller,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.center,
+              onSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                hintText: 'Level #',
+                hintStyle: const TextStyle(color: AppColors.textMuted),
+                filled: true,
+                fillColor: AppColors.surfaceLight,
+                errorText: _error,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Start',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -3,7 +3,6 @@ import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/audio_haptic_helper.dart';
-import '../../core/app_colors.dart';
 import '../../core/app_themes.dart';
 import '../../data/models/arrow.dart';
 import '../../data/models/level.dart';

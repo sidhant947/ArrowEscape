@@ -50,12 +50,15 @@ enum MaskShape {
 }
 
 class LevelModel {
+  static const int currentVersion = 2;
+
   final int levelNumber;
   final int gridSize;
   final List<ArrowModel> arrows;
   final MaskShape maskShape;
   final Set<String> mask;
   final List<OrphanDot> orphanDots;
+  final int version;
 
   LevelModel({
     required this.levelNumber,
@@ -64,6 +67,7 @@ class LevelModel {
     this.maskShape = MaskShape.square,
     this.mask = const {},
     this.orphanDots = const [],
+    this.version = currentVersion,
   });
 
   LevelModel copyWith({
@@ -73,6 +77,7 @@ class LevelModel {
     MaskShape? maskShape,
     Set<String>? mask,
     List<OrphanDot>? orphanDots,
+    int? version,
   }) => LevelModel(
     levelNumber: levelNumber ?? this.levelNumber,
     gridSize: gridSize ?? this.gridSize,
@@ -80,6 +85,7 @@ class LevelModel {
     maskShape: maskShape ?? this.maskShape,
     mask: mask ?? this.mask,
     orphanDots: orphanDots ?? this.orphanDots,
+    version: version ?? this.version,
   );
 
   Map<String, dynamic> toJson() => {
@@ -89,6 +95,7 @@ class LevelModel {
     'maskShape': maskShape.index,
     'mask': mask.toList(),
     'orphanDots': orphanDots.map((d) => d.toJson()).toList(),
+    'version': version,
   };
 
   factory LevelModel.fromJson(Map<String, dynamic> json) => LevelModel(
@@ -109,5 +116,6 @@ class LevelModel {
             .map((d) => OrphanDot.fromJson(d as Map<String, dynamic>))
             .toList()
         : const [],
+    version: json['version'] as int? ?? 1,
   );
 }
