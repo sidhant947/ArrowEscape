@@ -139,29 +139,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  void _showJumpToLevelDialog(int currentLevel) {
-    showDialog(
-      context: context,
-      builder: (ctx) => _JumpToLevelDialog(
-        initialLevel: currentLevel,
-        onSelectLevel: (lvl) async {
-          if (!mounted) return;
-          setState(() => _isNavigating = true);
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => GameScreen(
-                level: lvl,
-                gameMode: GameMode.classic,
-              ),
-            ),
-          );
-          if (mounted) setState(() => _isNavigating = false);
-        },
-      ),
-    );
-  }
-
   Future<void> _playRandom(String difficulty) async {
     Navigator.pop(context); 
     final levelNum = _randomLevelForDifficulty(difficulty);
@@ -330,22 +307,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
         centerTitle: true,
-        title: GestureDetector(
-          onTap: () => _showJumpToLevelDialog(progress.currentLevel),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'LEVEL ${progress.currentLevel}',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-                letterSpacing: 1,
-              ),
+        title: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            'LEVEL ${progress.currentLevel}',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+              letterSpacing: 1,
             ),
           ),
         ),
@@ -601,154 +575,6 @@ class _DifficultyButton extends ConsumerWidget {
                 color: AppColors.textPrimary,
                 letterSpacing: 1.2,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _JumpToLevelDialog extends StatefulWidget {
-  final int initialLevel;
-  final void Function(int level) onSelectLevel;
-
-  const _JumpToLevelDialog({
-    required this.initialLevel,
-    required this.onSelectLevel,
-  });
-
-  @override
-  State<_JumpToLevelDialog> createState() => _JumpToLevelDialogState();
-}
-
-class _JumpToLevelDialogState extends State<_JumpToLevelDialog> {
-  late final TextEditingController _controller;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialLevel.toString());
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final text = _controller.text.trim();
-    final lvl = int.tryParse(text);
-    if (lvl == null || lvl < 1) {
-      setState(() {
-        _error = 'Please enter a valid level (>= 1)';
-      });
-      return;
-    }
-    Navigator.pop(context);
-    widget.onSelectLevel(lvl);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Select Level',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Enter a level number to play',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _controller,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-              textAlign: TextAlign.center,
-              onSubmitted: (_) => _submit(),
-              decoration: InputDecoration(
-                hintText: 'Level #',
-                hintStyle: const TextStyle(color: AppColors.textMuted),
-                filled: true,
-                fillColor: AppColors.surfaceLight,
-                errorText: _error,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'Cancel',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'Start',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ),
           ],
         ),
