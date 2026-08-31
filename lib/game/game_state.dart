@@ -16,6 +16,7 @@ class GameState extends ChangeNotifier {
   bool _isDeadlocked = false;
   final GameTheme theme;
   final GameMode gameMode;
+  final bool heartRemover;
 
   late Map<String, OrphanDotType> _orphanDots;
 
@@ -42,6 +43,7 @@ class GameState extends ChangeNotifier {
     required this.onLifeLost,
     this.onDeadlock,
     this.gameMode = GameMode.classic,
+    this.heartRemover = false,
     this.onCombo,
     this.onParticleBurst,
     this.onCameraShake,
@@ -49,7 +51,7 @@ class GameState extends ChangeNotifier {
     _currentLevel = level;
     _arrows = level.arrows.map((a) => a.copyWith()).toList();
     _orphanDots = {for (final od in level.orphanDots) od.key: od.type};
-    _lives = gameMode == GameMode.zen ? 999 : AppConstants.maxLives;
+    _lives = (gameMode == GameMode.zen || heartRemover) ? 999 : AppConstants.maxLives;
   }
 
   List<ArrowModel> get arrows => _arrows;
@@ -162,7 +164,7 @@ class GameState extends ChangeNotifier {
 
   TapResult _handleBlocked(int index, ArrowModel arrow, String arrowId) {
     _arrows[index] = arrow.copyWith(state: ArrowState.blocked);
-    if (gameMode != GameMode.zen) {
+    if (gameMode != GameMode.zen && !heartRemover) {
       _lives--;
       _livesLost++;
       onLifeLost();
@@ -176,7 +178,7 @@ class GameState extends ChangeNotifier {
       }
     });
  
-    if (gameMode != GameMode.zen && _lives <= 0) {
+    if (gameMode != GameMode.zen && !heartRemover && _lives <= 0) {
       _isGameOver = true;
       onGameOver();
       notifyListeners();
@@ -238,7 +240,7 @@ class GameState extends ChangeNotifier {
     _arrows = _currentLevel.arrows.map((a) => a.copyWith(state: ArrowState.idle)).toList();
     _orphanDots = {for (final od in _currentLevel.orphanDots) od.key: od.type};
     _consumedDotsByArrow.clear();
-    _lives = gameMode == GameMode.zen ? 999 : AppConstants.maxLives;
+    _lives = (gameMode == GameMode.zen || heartRemover) ? 999 : AppConstants.maxLives;
     _livesLost = 0;
     _isComplete = false;
     _isGameOver = false;

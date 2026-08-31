@@ -27,7 +27,7 @@ class LevelGenerator {
     
     final bool isLargeGrid = gridSize > 20;
     
-    final int maxAttempts = isLargeGrid ? 25 : 20;
+    final int maxAttempts = isLargeGrid ? 30 : 20;
     for (int attempt = 0; attempt < maxAttempts && level == null; attempt++) {
       level = _attempt(
         levelNumber: levelNumber,
@@ -87,7 +87,7 @@ class LevelGenerator {
       if (levelNumber == 213 || levelNumber == 395 || levelNumber == 437) {
         fillRate = 0.55; 
       } else {
-        fillRate = (1.0 - (attempt - 12) * 0.02).clamp(0.68, 0.95);
+        fillRate = (1.0 - (attempt - 12) * 0.03).clamp(0.50, 0.95);
       }
       final targetOccupied = (mask.length * fillRate).round();
       targetCount = (targetOccupied / params.avgLen).round().clamp(4, 800);
@@ -120,6 +120,9 @@ class LevelGenerator {
       } else if (type == LevelType.god) {
         baseTangle = (baseTangle + 0.25).clamp(0.40, 1.0);
       }
+      if (attempt >= 15) {
+        baseTangle = (baseTangle - (attempt - 15) * 0.08).clamp(0.1, 1.0);
+      }
       tangleFactor = baseTangle;
 
       int veryLongMin = 5 + (gridSize ~/ 6);
@@ -134,7 +137,7 @@ class LevelGenerator {
       }
 
       final int maxAllowedBlocks =
-          (gridSize > 20) ? 0 : 1;
+          (gridSize > 20 && attempt < 15) ? 0 : 1;
 
       while (failures < maxFailures &&
           (fillEntireGrid
@@ -657,7 +660,7 @@ class LevelGenerator {
           .toSet();
       final orphanMap = <int, OrphanDotType>{};
 
-      final double colorProb;
+      double colorProb;
       if (levelNumber == 395 || levelNumber == 437) {
         colorProb = 0.0; 
       } else if (type == LevelType.god) {
@@ -699,6 +702,9 @@ class LevelGenerator {
         } else {
           colorProb = 0.80; 
         }
+      }
+      if (attempt >= 12) {
+        colorProb = (colorProb - (attempt - 12) * 0.08).clamp(0.0, 1.0);
       }
 
       for (int i = arrows.length - 1; i >= 0; i--) {
@@ -1251,6 +1257,7 @@ class LevelGenerator {
 
     int arrowIdCounter = 0;
     final occupied = <String>{};
+    final midCol = gridSize ~/ 2;
 
     for (final cell in maskCells) {
       final r = cell[0];
@@ -1258,22 +1265,36 @@ class LevelGenerator {
       final key = '$r,$c';
       if (occupied.contains(key)) continue;
 
-      for (final dir in ArrowDirection.values) {
-        final d = dir.delta;
-        final nr = r + d[0];
-        final nc = c + d[1];
+      final ArrowDirection dir =
+          c < midCol ? ArrowDirection.left : ArrowDirection.right;
+      final int deltaCol = dir == ArrowDirection.left ? 1 : -1;
+      final int tc = c + deltaCol;
+      final tKey = '$r,$tc';
 
-        if (nr < 0 || nr >= gridSize || nc < 0 || nc >= gridSize || !mask.contains('$nr,$nc')) {
-          arrows.add(ArrowModel(
-            id: 'fb_${levelNumber}_${arrowIdCounter++}',
-            row: r,
-            col: c,
-            direction: dir,
-            path: [[r, c]],
-          ));
-          occupied.add(key);
-          break;
-        }
+      if (mask.contains(tKey) && !occupied.contains(tKey)) {
+        arrows.add(ArrowModel(
+          id: 'fb_${levelNumber}_${arrowIdCounter++}',
+          row: r,
+          col: c,
+          direction: dir,
+          path: [
+            [r, c],
+            [r, tc],
+          ],
+        ));
+        occupied.add(key);
+        occupied.add(tKey);
+      } else {
+        arrows.add(ArrowModel(
+          id: 'fb_${levelNumber}_${arrowIdCounter++}',
+          row: r,
+          col: c,
+          direction: dir,
+          path: [
+            [r, c],
+          ],
+        ));
+        occupied.add(key);
       }
     }
 
@@ -1284,7 +1305,9 @@ class LevelGenerator {
         row: mid,
         col: mid,
         direction: ArrowDirection.right,
-        path: [[mid, mid]],
+        path: [
+          [mid, mid]
+        ],
       ));
     }
 
@@ -1292,6 +1315,7 @@ class LevelGenerator {
       levelNumber: levelNumber,
       gridSize: gridSize,
       arrows: arrows,
+      maskShape: _shapeFor(type, Random(levelNumber * 103 + 51)),
       mask: mask,
     );
   }

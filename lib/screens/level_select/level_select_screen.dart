@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_colors.dart';
+import '../../core/app_themes.dart';
 import '../../core/audio_haptic_helper.dart';
 import '../../main.dart';
 import '../game/game_screen.dart';
@@ -20,21 +21,20 @@ class LevelSelectScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(progressRepositoryProvider);
+    final themeColors = AppThemes.getThemeColors(progress.selectedTheme);
     final totalVisible = _calculateTotalVisible(progress.highestUnlockedLevel);
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+        decoration: BoxDecoration(gradient: themeColors.bgGradient),
         child: SafeArea(
           child: Column(
             children: [
-              
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Stack(
                   children: [
-                    
                     Align(
                       alignment: Alignment.centerLeft,
                       child: GestureDetector(
@@ -46,7 +46,6 @@ class LevelSelectScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    
                     const Center(
                       child: Text('Levels',
                           style: TextStyle(
@@ -57,7 +56,6 @@ class LevelSelectScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-
               Expanded(
                 child: GridView.builder(
                   padding:
@@ -80,6 +78,7 @@ class LevelSelectScreen extends ConsumerWidget {
                       isUnlocked: isUnlocked,
                       isCompleted: isCompleted,
                       isCurrentLevel: isCurrentLevel,
+                      themeColors: themeColors,
                       onTap: isUnlocked
                           ? () {
                               Navigator.pushReplacement(
@@ -113,6 +112,7 @@ class _LevelCell extends StatelessWidget {
   final bool isUnlocked;
   final bool isCompleted;
   final bool isCurrentLevel;
+  final ThemeColors themeColors;
   final VoidCallback? onTap;
 
   const _LevelCell({
@@ -120,6 +120,7 @@ class _LevelCell extends StatelessWidget {
     required this.isUnlocked,
     required this.isCompleted,
     required this.isCurrentLevel,
+    required this.themeColors,
     required this.onTap,
   });
 
@@ -131,22 +132,22 @@ class _LevelCell extends StatelessWidget {
     Color textColor;
 
     if (isCurrentLevel) {
-      bgColor = AppColors.surface;
-      borderColor = AppColors.accent;
-      shadowColor = AppColors.accentDark;
-      textColor = AppColors.accent;
+      bgColor = themeColors.surface;
+      borderColor = themeColors.accentColor;
+      shadowColor = themeColors.accentDark;
+      textColor = themeColors.accentColor;
     } else if (isCompleted) {
-      bgColor = AppColors.accent;
-      borderColor = AppColors.accent;
-      shadowColor = AppColors.accentDark;
+      bgColor = themeColors.accentColor;
+      borderColor = themeColors.accentColor;
+      shadowColor = themeColors.accentDark;
       textColor = const Color(0xFF101114);
     } else if (isUnlocked) {
-      bgColor = AppColors.surface;
-      borderColor = AppColors.surfaceLight;
-      shadowColor = const Color(0xFF1B1C20);
+      bgColor = themeColors.surface;
+      borderColor = themeColors.accentColor.withValues(alpha: 0.25);
+      shadowColor = themeColors.surface.withValues(alpha: 0.8);
       textColor = AppColors.textPrimary;
     } else {
-      bgColor = AppColors.background;
+      bgColor = themeColors.surface.withValues(alpha: 0.4);
       borderColor = Colors.transparent;
       shadowColor = Colors.transparent;
       textColor = AppColors.textMuted;
@@ -164,7 +165,8 @@ class _LevelCell extends StatelessWidget {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(10),
-          border: isUnlocked ? Border.all(color: borderColor, width: 1.5) : null,
+          border:
+              isUnlocked ? Border.all(color: borderColor, width: 1.5) : null,
           boxShadow: isUnlocked
               ? [
                   BoxShadow(

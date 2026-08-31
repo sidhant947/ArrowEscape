@@ -81,7 +81,7 @@ class LevelRepository {
       if (cached != null) return;
 
       final level = await compute(generateLevelIsolate, levelNumber)
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 12));
       _cache[levelNumber] = level;
       _saveToDisk(levelNumber, level);
     } catch (e) {
@@ -97,23 +97,34 @@ class LevelRepository {
     }
   }
 
-  Future<LevelModel> getLevelAsync(int levelNumber, {bool preGenerateNext = true}) async {
-    if (preGenerateNext) {
-      preGenerateRangeAsync(levelNumber + 1, 3);
-    }
-
+  Future<LevelModel> getLevelAsync(int levelNumber,
+      {bool preGenerateNext = true}) async {
     final cached = _tryLoadCached(levelNumber);
-    if (cached != null) return cached;
+    if (cached != null) {
+      if (preGenerateNext) {
+        preGenerateRangeAsync(levelNumber + 1, 3);
+      }
+      return cached;
+    }
 
     try {
       final level = await compute(generateLevelIsolate, levelNumber)
-          .timeout(const Duration(seconds: 3));
+          .timeout(const Duration(seconds: 15));
       _cache[levelNumber] = level;
       _saveToDisk(levelNumber, level);
+
+      if (preGenerateNext) {
+        preGenerateRangeAsync(levelNumber + 1, 3);
+      }
       return level;
     } catch (e) {
-      debugPrint('Isolate generation failed/timed out, generating synchronously: $e');
-      return getLevel(levelNumber);
+      debugPrint(
+          'Isolate generation failed/timed out, generating synchronously: $e');
+      final fallbackLevel = getLevel(levelNumber);
+      if (preGenerateNext) {
+        preGenerateRangeAsync(levelNumber + 1, 3);
+      }
+      return fallbackLevel;
     }
   }
 

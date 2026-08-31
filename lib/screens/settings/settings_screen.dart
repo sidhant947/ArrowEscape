@@ -63,6 +63,13 @@ class SettingsScreen extends ConsumerWidget {
                 onChanged: (_) => ref.read(progressRepositoryProvider).toggleHaptics(),
                 accentColor: themeColors.accentColor,
               ),
+              const SizedBox(height: 14),
+              _buildPreferenceTile(
+                title: 'HEART REMOVER',
+                value: progress.heartRemover,
+                onChanged: (_) => ref.read(progressRepositoryProvider).toggleHeartRemover(),
+                accentColor: themeColors.accentColor,
+              ),
               const SizedBox(height: 24),
               const Text(
                 'THEME & CUSTOM SKIN',
@@ -226,9 +233,16 @@ class _UnlockDialogState extends State<_UnlockDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final progress = widget.ref.watch(progressRepositoryProvider);
+    final themeColors = AppThemes.getThemeColors(progress.selectedTheme);
+
     return Dialog(
-      backgroundColor: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: themeColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(
+            color: themeColors.accentColor.withValues(alpha: 0.3), width: 1.5),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(28),
         child: SingleChildScrollView(
@@ -259,12 +273,14 @@ class _UnlockDialogState extends State<_UnlockDialog> {
                   backgroundColor: const Color(0xFFFFDD00),
                   foregroundColor: Colors.black,
                   minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () async {
                   try {
                     await launchUrl(
-                      Uri.parse('https://buymeacoffee.com/sidhant947/e/562696'),
+                      Uri.parse(
+                          'https://buymeacoffee.com/sidhant947/e/562696'),
                       mode: LaunchMode.externalApplication,
                     );
                   } catch (_) {}
@@ -291,7 +307,8 @@ class _UnlockDialogState extends State<_UnlockDialog> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+                    borderSide: BorderSide(
+                        color: themeColors.accentColor, width: 1.5),
                   ),
                 ),
               ),
@@ -301,23 +318,30 @@ class _UnlockDialogState extends State<_UnlockDialog> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                    child: const Text('Cancel',
+                        style: TextStyle(color: AppColors.textSecondary)),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
+                      backgroundColor: themeColors.accentColor,
                       foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                     ),
                     onPressed: () {
                       final code = _controller.text;
-                      final success = widget.ref.read(progressRepositoryProvider).unlockSkins(code);
+                      final success = widget.ref
+                          .read(progressRepositoryProvider)
+                          .unlockSkins(code);
                       if (success) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('All themes and skins unlocked!')),
+                          const SnackBar(
+                              content:
+                                  Text('All themes and skins unlocked!')),
                         );
                       } else {
                         setState(() {
@@ -325,7 +349,8 @@ class _UnlockDialogState extends State<_UnlockDialog> {
                         });
                       }
                     },
-                    child: const Text('Unlock Now', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text('Unlock Now',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

@@ -17,6 +17,7 @@ class ProgressRepository extends ChangeNotifier {
   GameTheme _selectedTheme = GameTheme.classic;
   bool _skinsUnlocked = false;
   bool _hapticsEnabled = true;
+  bool _heartRemover = false;
 
   final Map<int, LevelResult> _levelResults = {};
 
@@ -29,6 +30,7 @@ class ProgressRepository extends ChangeNotifier {
   GameTheme get selectedTheme => _selectedTheme;
   bool get skinsUnlocked => _skinsUnlocked;
   bool get hapticsEnabled => _hapticsEnabled;
+  bool get heartRemover => _heartRemover;
 
   int getStarsForLevel(int level) => _levelResults[level]?.stars ?? 0;
 
@@ -60,6 +62,7 @@ class ProgressRepository extends ChangeNotifier {
     _selectedTheme = GameTheme.values.firstWhere((t) => t.name == themeStr, orElse: () => GameTheme.classic);
     _skinsUnlocked = _box.get('skinsUnlocked', defaultValue: false);
     _hapticsEnabled = _box.get('hapticsEnabled', defaultValue: true);
+    _heartRemover = _box.get('heartRemover', defaultValue: false);
     AudioHapticHelper.hapticsEnabled = _hapticsEnabled;
 
     for (final key in _resultsBox.keys) {
@@ -85,6 +88,7 @@ class ProgressRepository extends ChangeNotifier {
       'selectedTheme': _selectedTheme.name,
       'skinsUnlocked': _skinsUnlocked,
       'hapticsEnabled': _hapticsEnabled,
+      'heartRemover': _heartRemover,
     });
 
     for (final entry in _levelResults.entries) {
@@ -101,6 +105,12 @@ class ProgressRepository extends ChangeNotifier {
   Future<void> toggleHaptics() async {
     _hapticsEnabled = !_hapticsEnabled;
     AudioHapticHelper.hapticsEnabled = _hapticsEnabled;
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> toggleHeartRemover() async {
+    _heartRemover = !_heartRemover;
     await _save();
     notifyListeners();
   }

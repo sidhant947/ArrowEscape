@@ -188,15 +188,18 @@ class _GameScreenState extends ConsumerState<GameScreen>
   }
 
   void _initGame() {
-    _lives = widget.gameMode == GameMode.zen ? 999 : AppConstants.maxLives;
+    final progress = ref.read(progressRepositoryProvider);
+    final isLifeFree = widget.gameMode == GameMode.zen || progress.heartRemover;
+    _lives = isLifeFree ? 999 : AppConstants.maxLives;
     _showingGameOver = false;
     _gameState?.removeListener(_onGameStateChanged);
     _gameState = GameState(
       level: _level,
-      theme: ref.read(progressRepositoryProvider).selectedTheme,
+      theme: progress.selectedTheme,
+      heartRemover: progress.heartRemover,
       onLevelComplete: _onLevelComplete,
-      onGameOver: widget.gameMode == GameMode.zen ? () {} : _onGameOver,
-      onLifeLost: widget.gameMode == GameMode.zen ? () {} : _onLifeLost,
+      onGameOver: isLifeFree ? () {} : _onGameOver,
+      onLifeLost: isLifeFree ? () {} : _onLifeLost,
       gameMode: widget.gameMode,
       onCombo: _triggerCombo,
       onCameraShake: _triggerShake,
@@ -208,8 +211,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
       level: _level,
       gameState: _gameState!,
       onLevelComplete: _onLevelComplete,
-      onGameOver: widget.gameMode == GameMode.zen ? () {} : _onGameOver,
-      onLifeLost: widget.gameMode == GameMode.zen ? () {} : _onLifeLost,
+      onGameOver: isLifeFree ? () {} : _onGameOver,
+      onLifeLost: isLifeFree ? () {} : _onLifeLost,
     );
 
     _resetTimerForLevel();
@@ -282,11 +285,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   Future<void> _handleRestart() async {
     if (mounted) {
+      final isLifeFree = widget.gameMode == GameMode.zen ||
+          ref.read(progressRepositoryProvider).heartRemover;
       setState(() {
         _showingGameOver = false;
         _showingComplete = false;
         _game.resetLevel();
-        _lives = AppConstants.maxLives;
+        _lives = isLifeFree ? 999 : AppConstants.maxLives;
         _resetTimerForLevel();
       });
     }
@@ -580,46 +585,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
                               ),
                             ),
                           ),
-                          Positioned(
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            height: 24,
-                            child: IgnorePointer(
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      AppColors.background,
-                                      AppColors.background.withValues(alpha: 0.0),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            height: 24,
-                            child: IgnorePointer(
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                    colors: [
-                                      AppColors.background,
-                                      AppColors.background.withValues(alpha: 0.0),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
                           if (_comboText != null)
                             Positioned(
                               top: 20,
@@ -695,6 +660,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 lives: _lives,
                 progress: progressVal,
                 gameMode: widget.gameMode,
+                heartRemover: progressState.heartRemover,
               ),
             ],
           ),
@@ -872,11 +838,13 @@ class _BottomBar extends StatelessWidget {
   final int lives;
   final double progress;
   final GameMode gameMode;
+  final bool heartRemover;
 
   const _BottomBar({
     required this.lives,
     required this.progress,
     required this.gameMode,
+    this.heartRemover = false,
   });
 
   @override
@@ -899,7 +867,9 @@ class _BottomBar extends StatelessWidget {
               ),
             ),
           ),
-          if (gameMode == GameMode.zen)
+          if (heartRemover || gameMode == GameMode.timeAttack)
+            const SizedBox()
+          else if (gameMode == GameMode.zen)
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -926,8 +896,6 @@ class _BottomBar extends StatelessWidget {
                 ),
               ],
             )
-          else if (gameMode == GameMode.timeAttack)
-            const SizedBox()
           else
             LivesBar(lives: lives, maxLives: AppConstants.maxLives),
         ],
@@ -936,7 +904,7 @@ class _BottomBar extends StatelessWidget {
   }
 }
 
-class _LevelCompleteDialog extends StatelessWidget {
+class _LevelCompleteDialog extends ConsumerWidget {
   final LevelModel level;
   final int stars;
   final bool isRandom;
@@ -952,18 +920,23 @@ class _LevelCompleteDialog extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress = ref.watch(progressRepositoryProvider);
+    final themeColors = AppThemes.getThemeColors(progress.selectedTheme);
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: themeColors.surface,
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: AppColors.surfaceLight, width: 3),
+          border: Border.all(
+              color: themeColors.accentColor.withValues(alpha: 0.35),
+              width: 2.5),
           boxShadow: [
             BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.15),
+                color: themeColors.accentColor.withValues(alpha: 0.18),
                 blurRadius: 32),
           ],
         ),
@@ -986,8 +959,9 @@ class _LevelCompleteDialog extends StatelessWidget {
                           i < stars
                               ? Icons.star_rounded
                               : Icons.star_border_rounded,
-                          color:
-                              i < stars ? Colors.white : AppColors.surfaceLight,
+                          color: i < stars
+                              ? themeColors.accentColor
+                              : themeColors.surface.withValues(alpha: 0.6),
                           size: 38,
                         ),
                       )
@@ -1002,14 +976,14 @@ class _LevelCompleteDialog extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: themeColors.background,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.emoji_events,
-                      color: AppColors.textPrimary,
+                      color: themeColors.accentColor,
                       size: 32,
                     ).animate(onPlay: (c) => c.repeat()).scale(
                         begin: const Offset(0.9, 0.9),
@@ -1052,7 +1026,7 @@ class _LevelCompleteDialog extends StatelessWidget {
               label: 'Home',
               icon: Icons.home_rounded,
               textColor: AppColors.textPrimary,
-              iconColor: AppColors.textPrimary,
+              iconColor: themeColors.accentColor,
               onTap: onMenu,
             ),
             const SizedBox(height: 10),
@@ -1060,7 +1034,7 @@ class _LevelCompleteDialog extends StatelessWidget {
               label: 'Buy me a coffee',
               icon: Icons.coffee_rounded,
               textColor: AppColors.textPrimary,
-              iconColor: AppColors.textPrimary,
+              iconColor: themeColors.accentColor,
               onTap: () async {
                 final uri = Uri.parse('https://ko-fi.com/sidhant947');
                 try {
@@ -1075,7 +1049,7 @@ class _LevelCompleteDialog extends StatelessWidget {
   }
 }
 
-class _GameOverDialog extends StatelessWidget {
+class _GameOverDialog extends ConsumerWidget {
   final LevelModel level;
   final bool isTimeout;
   final int continueTime;
@@ -1097,20 +1071,24 @@ class _GameOverDialog extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isTimeAttack = gameMode == GameMode.timeAttack;
+    final progress = ref.watch(progressRepositoryProvider);
+    final themeColors = AppThemes.getThemeColors(progress.selectedTheme);
 
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: themeColors.surface,
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: AppColors.surfaceLight, width: 3),
+          border: Border.all(
+              color: themeColors.accentColor.withValues(alpha: 0.35),
+              width: 2.5),
           boxShadow: [
             BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.15),
+                color: themeColors.accentColor.withValues(alpha: 0.18),
                 blurRadius: 32),
           ],
         ),
@@ -1121,7 +1099,8 @@ class _GameOverDialog extends StatelessWidget {
               isTimeAttack
                   ? Icons.timer_off_rounded
                   : (isTimeout ? Icons.hourglass_top : Icons.heart_broken),
-              color: isTimeAttack ? Colors.orangeAccent : AppColors.accent,
+              color:
+                  isTimeAttack ? Colors.orangeAccent : themeColors.accentColor,
               size: 52,
             ).animate().shake(duration: 500.ms),
             const SizedBox(height: 12),
@@ -1152,7 +1131,7 @@ class _GameOverDialog extends StatelessWidget {
               label: isTimeAttack ? 'Start New Run' : 'Restart Level',
               icon: Icons.refresh_rounded,
               textColor: AppColors.textPrimary,
-              iconColor: AppColors.textPrimary,
+              iconColor: themeColors.accentColor,
               onTap: onRestart,
             ),
             const SizedBox(height: 10),
@@ -1160,7 +1139,7 @@ class _GameOverDialog extends StatelessWidget {
               label: 'Home',
               icon: Icons.home_rounded,
               textColor: AppColors.textSecondary,
-              iconColor: AppColors.accent,
+              iconColor: themeColors.accentColor,
               onTap: onMenu,
             ),
           ],
@@ -1199,7 +1178,7 @@ class _DialogButton extends ConsumerWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: themeColors.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: themeColors.accentColor, width: 1.5),
           boxShadow: [
@@ -1215,7 +1194,11 @@ class _DialogButton extends ConsumerWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: iconColor == Colors.white ? themeColors.accentColor : iconColor, size: 20),
+              Icon(icon,
+                  color: iconColor == Colors.white
+                      ? themeColors.accentColor
+                      : iconColor,
+                  size: 20),
               const SizedBox(width: 8),
               Text(
                 label,
@@ -1234,77 +1217,119 @@ class _DialogButton extends ConsumerWidget {
   }
 }
 
-class _BouncingDots extends StatefulWidget {
-  const _BouncingDots();
+class _LoaderAnimation extends StatefulWidget {
+  final Color color;
+  const _LoaderAnimation({required this.color});
 
   @override
-  State<_BouncingDots> createState() => _BouncingDotsState();
+  State<_LoaderAnimation> createState() => _LoaderAnimationState();
 }
 
-class _BouncingDotsState extends State<_BouncingDots>
+class _LoaderAnimationState extends State<_LoaderAnimation>
     with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
+  late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
+    _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1100),
     )..repeat();
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(3, (i) {
-        return AnimatedBuilder(
-          animation: _ctrl,
-          builder: (context, child) {
-            final phase = (_ctrl.value + i * 0.33) % 1.0;
-            final t = (1 - (phase * 2 - 1).abs()).clamp(0.0, 1.0);
-            return Transform.translate(
-              offset: Offset(0, -8.0 * t),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 5),
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.5 + 0.5 * t),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            );
-          },
-        );
-      }),
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return CustomPaint(
+            painter: _LoaderPainter(
+              progress: _controller.value,
+              color: widget.color,
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
-class _LevelLoadingScreen extends StatefulWidget {
+class _LoaderPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+
+  _LoaderPainter({required this.progress, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - 6) / 2;
+
+    final bgPaint = Paint()
+      ..color = color.withValues(alpha: 0.12)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.5;
+    canvas.drawCircle(center, radius, bgPaint);
+
+    final startAngle = progress * 2 * pi;
+    const sweepAngle = pi * 0.75;
+
+    final arcPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 3.5;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      sweepAngle,
+      false,
+      arcPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _LoaderPainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.color != color;
+}
+
+class _LevelLoadingScreen extends StatelessWidget {
   final ThemeColors themeColors;
   const _LevelLoadingScreen({required this.themeColors});
 
   @override
-  State<_LevelLoadingScreen> createState() => _LevelLoadingScreenState();
-}
-
-class _LevelLoadingScreenState extends State<_LevelLoadingScreen> {
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(gradient: widget.themeColors.bgGradient),
-        child: const Center(
-          child: _BouncingDots(),
+        decoration: BoxDecoration(gradient: themeColors.bgGradient),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _LoaderAnimation(color: themeColors.accentColor),
+              const SizedBox(height: 24),
+              Text(
+                'LOADING LEVEL...',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 2.0,
+                  color: AppColors.textSecondary.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

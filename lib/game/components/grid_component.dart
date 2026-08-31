@@ -96,11 +96,31 @@ class GridComponent extends PositionComponent {
     final themeColors = AppThemes.getThemeColors(gameState.theme);
     final dotColor = themeColors.arrowColor;
 
+    final isShaped = gameState.level.maskShape != MaskShape.square;
+    if (isShaped) {
+      final tilePaint = Paint()
+        ..color = dotColor.withValues(alpha: 0.04)
+        ..style = PaintingStyle.fill;
+      for (final cellKey in _mask) {
+        final parts = cellKey.split(',');
+        final r = int.parse(parts[0]);
+        final c = int.parse(parts[1]);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(
+                c * cs + cs * 0.04, r * cs + cs * 0.04, cs * 0.92, cs * 0.92),
+            Radius.circular(cs * 0.16),
+          ),
+          tilePaint,
+        );
+      }
+    }
+
     final inPaint = Paint()
-      ..color = dotColor.withValues(alpha: 0.24)
+      ..color = dotColor.withValues(alpha: isShaped ? 0.28 : 0.24)
       ..style = PaintingStyle.fill;
     final outPaint = Paint()
-      ..color = dotColor.withValues(alpha: 0.07)
+      ..color = dotColor.withValues(alpha: isShaped ? 0.04 : 0.07)
       ..style = PaintingStyle.fill;
 
     for (int r = 0; r < gridSize; r++) {

@@ -5,7 +5,6 @@ class MaskGenerator {
 
   static Set<String> shapeByName(String name, int side, Random rng) {
     switch (name) {
-      
       case 'cat':       return catMask(side);
       case 'dog':       return dogMask(side);
       case 'frog':      return frogMask(side);
@@ -15,12 +14,10 @@ class MaskGenerator {
       case 'fish':      return fishMask(side);
       case 'bird':      return birdMask(side);
       case 'butterfly': return butterflyMask(side);
-      
       case 'guitar':    return guitarMask(side);
       case 'tree':      return treeMask(side);
       case 'house':     return houseMask(side);
       case 'crown':     return crownMask(side);
-      
       case 'heart':     return heartMask(side);
       case 'star':      return starMask(side, 5);
       case 'diamond':   return diamondMask(side);
@@ -31,15 +28,28 @@ class MaskGenerator {
     }
   }
 
-  static void _ellipse(Set<String> mask, int side,
-      double cx, double cy, double rx, double ry) {
+  static bool _inEllipse(
+      double x, double y, double cx, double cy, double rx, double ry) {
+    final dx = (x - cx) / rx;
+    final dy = (y - cy) / ry;
+    return dx * dx + dy * dy <= 1.0;
+  }
+
+  static Set<String> _fromPredicate(
+      int side, bool Function(double x, double y, double absDx) predicate) {
+    final mask = <String>{};
+    final s = side.toDouble();
     for (int r = 0; r < side; r++) {
+      final y = (r + 0.5) / s;
       for (int c = 0; c < side; c++) {
-        final dx = (c + 0.5 - cx) / rx;
-        final dy = (r + 0.5 - cy) / ry;
-        if (dx * dx + dy * dy <= 1.0) mask.add('$r,$c');
+        final x = (c + 0.5) / s;
+        final absDx = (x - 0.5).abs();
+        if (predicate(x, y, absDx)) {
+          mask.add('$r,$c');
+        }
       }
     }
+    return _clean(mask, side);
   }
 
   static Set<String> _clean(Set<String> mask, int side) {
@@ -57,8 +67,13 @@ class MaskGenerator {
         region.add(cur);
         final parts = cur.split(',');
         final r = int.parse(parts[0]), c = int.parse(parts[1]);
-        for (final d in [[-1,0],[1,0],[0,-1],[0,1]]) {
-          final nk = '${r+d[0]},${c+d[1]}';
+        for (final d in [
+          [-1, 0],
+          [1, 0],
+          [0, -1],
+          [0, 1]
+        ]) {
+          final nk = '${r + d[0]},${c + d[1]}';
           if (mask.contains(nk) && !visited.contains(nk)) stack.add(nk);
         }
       }
@@ -80,217 +95,176 @@ class MaskGenerator {
   }
 
   static Set<String> catMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.5, s*0.55, s*0.35, s*0.32);
-    
-    _ellipse(mask, side, s*0.22, s*0.2, s*0.15, s*0.18);
-    
-    _ellipse(mask, side, s*0.78, s*0.2, s*0.15, s*0.18);
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(absDx, y, 0.0, 0.58, 0.38, 0.32)) return true;
+      if (_inEllipse(absDx, y, 0.28, 0.24, 0.14, 0.18)) return true;
+      if (y >= 0.14 && y <= 0.38 && absDx >= 0.16 && absDx <= 0.40) {
+        final t = (y - 0.14) / 0.24;
+        if (absDx <= 0.28 + t * 0.12 && absDx >= 0.28 - t * 0.12) return true;
+      }
+      return false;
+    });
   }
 
   static Set<String> dogMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.5, s*0.5, s*0.35, s*0.3);
-    
-    _ellipse(mask, side, s*0.15, s*0.45, s*0.12, s*0.25);
-    
-    _ellipse(mask, side, s*0.85, s*0.45, s*0.12, s*0.25);
-    
-    _ellipse(mask, side, s*0.5, s*0.65, s*0.15, s*0.12);
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(absDx, y, 0.0, 0.48, 0.32, 0.28)) return true;
+      if (_inEllipse(absDx, y, 0.35, 0.52, 0.13, 0.30)) return true;
+      if (_inEllipse(absDx, y, 0.0, 0.68, 0.22, 0.20)) return true;
+      if (_inEllipse(absDx, y, 0.0, 0.30, 0.22, 0.14)) return true;
+      return false;
+    });
   }
 
   static Set<String> frogMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.5, s*0.6, s*0.42, s*0.3);
-    
-    _ellipse(mask, side, s*0.25, s*0.3, s*0.14, s*0.14);
-    
-    _ellipse(mask, side, s*0.75, s*0.3, s*0.14, s*0.14);
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(absDx, y, 0.0, 0.62, 0.44, 0.28)) return true;
+      if (_inEllipse(absDx, y, 0.26, 0.32, 0.17, 0.18)) return true;
+      if (_inEllipse(absDx, y, 0.0, 0.42, 0.24, 0.14)) return true;
+      if (_inEllipse(absDx, y, 0.36, 0.82, 0.10, 0.08)) return true;
+      return false;
+    });
   }
 
   static Set<String> foxMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.5, s*0.45, s*0.3, s*0.35);
-    
-    _ellipse(mask, side, s*0.5, s*0.72, s*0.12, s*0.15);
-    
-    _ellipse(mask, side, s*0.82, s*0.35, s*0.15, s*0.22);
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(absDx, y, 0.0, 0.46, 0.38, 0.24)) return true;
+      if (_inEllipse(absDx, y, 0.30, 0.24, 0.14, 0.20)) return true;
+      if (y >= 0.12 && y <= 0.40 && absDx >= 0.16 && absDx <= 0.44) {
+        final t = (y - 0.12) / 0.28;
+        if (absDx <= 0.30 + t * 0.14 && absDx >= 0.30 - t * 0.14) return true;
+      }
+      if (y >= 0.44 && y <= 0.86) {
+        final t = (y - 0.44) / 0.42;
+        if (absDx <= (1.0 - t * 0.82) * 0.36) return true;
+      }
+      return false;
+    });
   }
 
   static Set<String> tigerMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.5, s*0.5, s*0.4, s*0.38);
-    
-    _ellipse(mask, side, s*0.18, s*0.18, s*0.12, s*0.12);
-    _ellipse(mask, side, s*0.82, s*0.18, s*0.12, s*0.12);
-    
-    _ellipse(mask, side, s*0.5, s*0.62, s*0.14, s*0.1);
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(absDx, y, 0.0, 0.52, 0.40, 0.34)) return true;
+      if (_inEllipse(absDx, y, 0.30, 0.22, 0.14, 0.14)) return true;
+      if (_inEllipse(absDx, y, 0.36, 0.60, 0.12, 0.16)) return true;
+      if (_inEllipse(absDx, y, 0.0, 0.72, 0.24, 0.16)) return true;
+      return false;
+    });
   }
 
   static Set<String> pandaMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.5, s*0.5, s*0.38, s*0.36);
-    
-    _ellipse(mask, side, s*0.32, s*0.42, s*0.1, s*0.1);
-    _ellipse(mask, side, s*0.68, s*0.42, s*0.1, s*0.1);
-    
-    _ellipse(mask, side, s*0.2, s*0.2, s*0.1, s*0.1);
-    _ellipse(mask, side, s*0.8, s*0.2, s*0.1, s*0.1);
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(absDx, y, 0.0, 0.54, 0.42, 0.36)) return true;
+      if (_inEllipse(absDx, y, 0.32, 0.22, 0.16, 0.15)) return true;
+      if (_inEllipse(absDx, y, 0.34, 0.62, 0.12, 0.16)) return true;
+      return false;
+    });
   }
 
   static Set<String> fishMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.42, s*0.5, s*0.32, s*0.22);
-    
-    _ellipse(mask, side, s*0.82, s*0.5, s*0.14, s*0.25);
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(x, y, 0.44, 0.50, 0.32, 0.24)) return true;
+      if (x <= 0.44) {
+        final t = (0.44 - x) / 0.34;
+        if (t <= 1.0 && (y - 0.50).abs() <= (1.0 - t * 0.8) * 0.24) return true;
+      }
+      if (_inEllipse(x, y, 0.46, 0.24, 0.16, 0.12) && y <= 0.50) return true;
+      if (_inEllipse(x, y, 0.46, 0.76, 0.12, 0.10) && y >= 0.50) return true;
+      if (x >= 0.66 && x <= 0.90) {
+        final t = (x - 0.66) / 0.24;
+        final spread = 0.08 + t * 0.28;
+        if ((y - 0.50).abs() <= spread) {
+          if (x > 0.82 && (y - 0.50).abs() < (x - 0.82) * 1.5) return false;
+          return true;
+        }
+      }
+      return false;
+    });
   }
 
   static Set<String> birdMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.5, s*0.6, s*0.3, s*0.22);
-    
-    _ellipse(mask, side, s*0.5, s*0.28, s*0.16, s*0.16);
-    
-    _ellipse(mask, side, s*0.5, s*0.18, s*0.06, s*0.06);
-    
-    _ellipse(mask, side, s*0.22, s*0.5, s*0.15, s*0.18);
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(absDx, y, 0.0, 0.52, 0.14, 0.30)) return true;
+      if (_inEllipse(absDx, y, 0.0, 0.22, 0.10, 0.12)) return true;
+      if (y >= 0.10 && y <= 0.22 && absDx <= (y - 0.10) * 0.6) return true;
+      if (y >= 0.24 && y <= 0.64) {
+        final t = (y - 0.24) / 0.40;
+        final wingSpan = 0.12 + sin(t * pi) * 0.36;
+        if (absDx <= wingSpan) return true;
+      }
+      if (y >= 0.72 && y <= 0.92 && absDx <= (0.92 - y) * 0.6 + 0.06) return true;
+      return false;
+    });
   }
 
   static Set<String> butterflyMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.5, s*0.5, s*0.06, s*0.35);
-    
-    _ellipse(mask, side, s*0.28, s*0.35, s*0.22, s*0.18);
-    _ellipse(mask, side, s*0.72, s*0.35, s*0.22, s*0.18);
-    
-    _ellipse(mask, side, s*0.3, s*0.65, s*0.18, s*0.15);
-    _ellipse(mask, side, s*0.7, s*0.65, s*0.18, s*0.15);
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(absDx, y, 0.0, 0.50, 0.06, 0.38)) return true;
+      if (_inEllipse(absDx, y, 0.28, 0.34, 0.20, 0.22)) return true;
+      if (_inEllipse(absDx, y, 0.24, 0.68, 0.16, 0.18)) return true;
+      if (_inEllipse(absDx, y, 0.12, 0.14, 0.05, 0.05)) return true;
+      return false;
+    });
   }
 
   static Set<String> guitarMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.5, s*0.65, s*0.28, s*0.25);
-    
-    _ellipse(mask, side, s*0.5, s*0.38, s*0.2, s*0.15);
-    
-    for (int r = (s*0.18).toInt(); r < (s*0.35).toInt(); r++) {
-      for (int c = (s*0.44).toInt(); c < (s*0.56).toInt(); c++) {
-        mask.add('$r,$c');
-      }
-    }
-    
-    _ellipse(mask, side, s*0.5, s*0.12, s*0.1, s*0.08);
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(absDx, y, 0.0, 0.72, 0.32, 0.22)) return true;
+      if (_inEllipse(absDx, y, 0.0, 0.46, 0.24, 0.16)) return true;
+      if (absDx <= 0.18 && y >= 0.44 && y <= 0.74) return true;
+      if (absDx <= 0.08 && y >= 0.18 && y <= 0.46) return true;
+      if (_inEllipse(absDx, y, 0.0, 0.12, 0.12, 0.08)) return true;
+      return false;
+    });
   }
 
   static Set<String> treeMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.5, s*0.38, s*0.35, s*0.3);
-    
-    for (int r = (s*0.65).toInt(); r < (s*0.92).toInt(); r++) {
-      for (int c = (s*0.4).toInt(); c < (s*0.6).toInt(); c++) {
-        mask.add('$r,$c');
-      }
-    }
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(absDx, y, 0.0, 0.26, 0.24, 0.18)) return true;
+      if (_inEllipse(absDx, y, 0.0, 0.46, 0.36, 0.20)) return true;
+      if (_inEllipse(absDx, y, 0.0, 0.64, 0.44, 0.20)) return true;
+      if (absDx <= 0.11 && y >= 0.60 && y <= 0.94) return true;
+      return false;
+    });
   }
 
   static Set<String> houseMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    for (int i = 0; i < (s*0.35).toInt(); i++) {
-      final frac = i / (s * 0.35);
-      final halfW = (s * 0.45 * (1 - frac * 0.8)).toInt();
-      final center = (s * 0.5).toInt();
-      final row = (s * 0.1 + i).toInt();
-      for (int c = center - halfW; c <= center + halfW; c++) {
-        if (c >= 0 && c < side) mask.add('$row,$c');
-      }
-    }
-    
-    _ellipse(mask, side, s*0.5, s*0.7, s*0.38, s*0.25);
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (y >= 0.12 && y <= 0.46 && absDx <= (y - 0.12) / 0.34 * 0.46) return true;
+      if (absDx <= 0.38 && y >= 0.44 && y <= 0.88) return true;
+      if (x >= 0.64 && x <= 0.76 && y >= 0.18 && y <= 0.44) return true;
+      return false;
+    });
   }
 
   static Set<String> crownMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    for (int r = (s*0.55).toInt(); r < (s*0.8).toInt(); r++) {
-      for (int c = (s*0.15).toInt(); c < (s*0.85).toInt(); c++) {
-        mask.add('$r,$c');
-      }
-    }
-    
-    _ellipse(mask, side, s*0.2, s*0.35, s*0.08, s*0.18);
-    _ellipse(mask, side, s*0.5, s*0.3, s*0.08, s*0.22);
-    _ellipse(mask, side, s*0.8, s*0.35, s*0.08, s*0.18);
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (absDx <= 0.42 && y >= 0.62 && y <= 0.84) return true;
+      if (y >= 0.18 && y <= 0.64 && absDx <= (y - 0.18) / 0.46 * 0.16) return true;
+      if (y >= 0.28 && y <= 0.64 && (absDx - 0.34).abs() <= (y - 0.28) / 0.36 * 0.12) return true;
+      if (y >= 0.48 && y <= 0.64 && absDx <= 0.38) return true;
+      return false;
+    });
   }
 
   static Set<String> heartMask(int side) {
-    final mask = <String>{};
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.33, s*0.35, s*0.22, s*0.2);
-    
-    _ellipse(mask, side, s*0.67, s*0.35, s*0.22, s*0.2);
-    
-    final tipY = s * 0.88;
-    final centerX = s * 0.5;
-    for (int r = 0; r < side; r++) {
-      final y = r + 0.5;
-      if (y < s * 0.4 || y > tipY) continue;
-      final frac = (y - s * 0.4) / (tipY - s * 0.4);
-      final halfW = s * 0.35 * (1 - frac);
-      for (int c = 0; c < side; c++) {
-        final x = c + 0.5;
-        if ((x - centerX).abs() <= halfW) mask.add('$r,$c');
-      }
-    }
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(absDx, y, 0.22, 0.36, 0.22, 0.22)) return true;
+      if (y >= 0.36 && y <= 0.90 && absDx <= 0.44 * (1.0 - (y - 0.36) / 0.54)) return true;
+      if (absDx <= 0.22 && y >= 0.24 && y <= 0.50) return true;
+      return false;
+    });
   }
 
   static Set<String> starMask(int side, int points) {
     final mask = <String>{};
     final s = side.toDouble();
-    final cx = s * 0.5, cy = s * 0.5;
-    final outerR = s * 0.45, innerR = s * 0.2;
+    const cx = 0.5, cy = 0.5;
+    const outerR = 0.46, innerR = 0.20;
     for (int r = 0; r < side; r++) {
       for (int c = 0; c < side; c++) {
-        final x = c + 0.5 - cx, y = r + 0.5 - cy;
+        final x = (c + 0.5) / s - cx;
+        final y = (r + 0.5) / s - cy;
         final angle = (atan2(y, x) + pi * 2) % (2 * pi);
         final sector = (angle / (2 * pi / points)).floor();
         final dist = sqrt(x * x + y * y);
@@ -306,62 +280,40 @@ class MaskGenerator {
   }
 
   static Set<String> diamondMask(int side) {
-    final mask = <String>{};
-    final cx = side / 2.0, cy = side / 2.0;
-    final r = side * 0.45;
-    for (int row = 0; row < side; row++) {
-      for (int col = 0; col < side; col++) {
-        if ((col + 0.5 - cx).abs() / r + (row + 0.5 - cy).abs() / r <= 1.0) {
-          mask.add('$row,$col');
-        }
-      }
-    }
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      return (absDx / 0.45) + ((y - 0.5).abs() / 0.45) <= 1.0;
+    });
   }
 
   static Set<String> hexagonMask(int side) {
-    final mask = <String>{};
-    final cx = side / 2.0, cy = side / 2.0;
-    final r = side * 0.45;
-    for (int row = 0; row < side; row++) {
-      for (int col = 0; col < side; col++) {
-        final dx = (col + 0.5 - cx).abs();
-        final dy = (row + 0.5 - cy).abs();
-        if (dy <= r * 0.866 && dx <= r * 0.5 + (r - dy / 0.866) * 0.5) {
-          mask.add('$row,$col');
-        }
-      }
-    }
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      final dy = (y - 0.5).abs();
+      return dy <= 0.42 && (absDx * 0.866 + dy * 0.5) <= 0.42 && absDx <= 0.44;
+    });
   }
 
   static Set<String> blobMask(int side, int seed) {
-    final mask = <String>{};
     final rng = Random(seed);
-    final s = side.toDouble();
-    
-    _ellipse(mask, side, s*0.5, s*0.5, s*0.32, s*0.3);
-    
-    for (int i = 0; i < 5; i++) {
-      final cx = s * (0.25 + rng.nextDouble() * 0.5);
-      final cy = s * (0.25 + rng.nextDouble() * 0.5);
-      final rx = s * (0.12 + rng.nextDouble() * 0.15);
-      final ry = s * (0.12 + rng.nextDouble() * 0.15);
-      _ellipse(mask, side, cx, cy, rx, ry);
-    }
-    return _clean(mask, side);
+    final offsets = List.generate(6, (i) {
+      final angle = (i / 6.0) * 2 * pi;
+      final dist = 0.16 + rng.nextDouble() * 0.12;
+      final r = 0.14 + rng.nextDouble() * 0.08;
+      return [0.5 + cos(angle) * dist, 0.5 + sin(angle) * dist, r];
+    });
+
+    return _fromPredicate(side, (x, y, absDx) {
+      if (_inEllipse(x, y, 0.5, 0.5, 0.30, 0.28)) return true;
+      for (final o in offsets) {
+        if (_inEllipse(x, y, o[0], o[1], o[2], o[2])) return true;
+      }
+      return false;
+    });
   }
 
   static Set<String> circleMask(int side) {
-    final mask = <String>{};
-    final cx = side / 2.0, cy = side / 2.0;
-    final r = side * 0.45;
-    for (int row = 0; row < side; row++) {
-      for (int col = 0; col < side; col++) {
-        final dx = col + 0.5 - cx, dy = row + 0.5 - cy;
-        if (dx * dx + dy * dy <= r * r) mask.add('$row,$col');
-      }
-    }
-    return _clean(mask, side);
+    return _fromPredicate(side, (x, y, absDx) {
+      final dx = x - 0.5, dy = y - 0.5;
+      return dx * dx + dy * dy <= 0.45 * 0.45;
+    });
   }
 }
