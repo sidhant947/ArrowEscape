@@ -120,11 +120,11 @@ class LevelRepository {
     } catch (e) {
       debugPrint(
           'Isolate generation failed/timed out, generating synchronously: $e');
-      final fallbackLevel = getLevel(levelNumber);
+      final syncLevel = getLevel(levelNumber);
       if (preGenerateNext) {
         preGenerateRangeAsync(levelNumber + 1, 3);
       }
-      return fallbackLevel;
+      return syncLevel;
     }
   }
 

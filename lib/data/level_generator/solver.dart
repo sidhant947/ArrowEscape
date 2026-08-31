@@ -44,16 +44,76 @@ class LevelSolver {
     final exitVisited = Uint32List(gridSize * gridSize);
     int exitToken = 0;
 
+    void undoGreedy(List<int> greedyList) {
+      for (int k = greedyList.length - 1; k >= 0; k--) {
+        final idx = greedyList[k];
+        path.removeLast();
+        for (final pt in arrows[idx].path) {
+          board[pt[0] * gridSize + pt[1]] = idx + 1;
+        }
+        arrowHash ^= arrows[idx].id.hashCode;
+        activeArrows[idx] = true;
+      }
+    }
+
     bool dfs(int remainingCount) {
       if (remainingCount == 0) return true;
       if (statesVisited > maxStatesLimit) return false;
 
+      final greedyCleared = <int>[];
+      bool progress = true;
+      while (progress) {
+        progress = false;
+        for (int i = 0; i < arrows.length; i++) {
+          if (!activeArrows[i]) continue;
+          exitToken++;
+          if (exitToken == 0) {
+            exitVisited.fillRange(0, exitVisited.length, 0);
+            exitToken = 1;
+          }
+          final consumed = _simulateExit(i, gridSize, board, activeOrphans, orphanTypes, arrows, exitVisited, exitToken);
+          if (consumed == null) continue;
+
+          bool consumesRedirector = false;
+          for (final idx in consumed) {
+            if (activeOrphans[idx] && orphanTypes[idx] != OrphanDotType.neutral.index) {
+              consumesRedirector = true;
+              break;
+            }
+          }
+
+          if (!consumesRedirector) {
+            activeArrows[i] = false;
+            final id = arrows[i].id;
+            arrowHash ^= id.hashCode;
+            for (final pt in arrows[i].path) {
+              board[pt[0] * gridSize + pt[1]] = 0;
+            }
+            for (final idx in consumed) {
+              if (activeOrphans[idx]) {
+                activeOrphans[idx] = false;
+                final odKey = '${idx ~/ gridSize},${idx % gridSize}';
+                dotHash ^= odKey.hashCode;
+              }
+            }
+            path.add(id);
+            greedyCleared.add(i);
+            progress = true;
+          }
+        }
+      }
+
+      if (path.length == arrows.length) return true;
+
       final hash = '$arrowHash|$dotHash';
-      if (visited.contains(hash)) return false;
+      if (visited.contains(hash)) {
+        undoGreedy(greedyCleared);
+        return false;
+      }
       visited.add(hash);
       statesVisited++;
 
-      for (int i = arrows.length - 1; i >= 0; i--) {
+      for (int i = 0; i < arrows.length; i++) {
         if (!activeArrows[i]) continue;
 
         exitToken++;
@@ -84,7 +144,7 @@ class LevelSolver {
 
         path.add(id);
 
-        if (dfs(remainingCount - 1)) return true;
+        if (dfs(arrows.length - path.length)) return true;
 
         path.removeLast();
         for (final idx in deactivated) {
@@ -98,6 +158,8 @@ class LevelSolver {
         arrowHash ^= id.hashCode;
         activeArrows[i] = true;
       }
+
+      undoGreedy(greedyCleared);
       return false;
     }
 
