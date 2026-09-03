@@ -427,6 +427,12 @@ class LevelGenerator {
         }
       }
 
+      orphanDots.addAll(orphanMap.entries.map((entry) => OrphanDot(
+            row: entry.key ~/ 1000,
+            col: entry.key % 1000,
+            type: entry.value,
+          )));
+
       final tempLevel = LevelModel(
         levelNumber: levelNumber,
         gridSize: gridSize,
@@ -438,13 +444,11 @@ class LevelGenerator {
 
       if (LevelSolver.solve(tempLevel, 2000) == null) {
         orphanDots.clear();
-        for (final entry in orphanMap.entries) {
-          orphanDots.add(OrphanDot(
-            row: entry.key ~/ 1000,
-            col: entry.key % 1000,
-            type: OrphanDotType.neutral,
-          ));
-        }
+        orphanDots.addAll(orphanMap.entries.map((entry) => OrphanDot(
+              row: entry.key ~/ 1000,
+              col: entry.key % 1000,
+              type: OrphanDotType.neutral,
+            )));
       }
     }
 

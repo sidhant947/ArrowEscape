@@ -65,7 +65,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 14),
               _buildPreferenceTile(
-                title: 'HEART REMOVER',
+                title: 'INFINITE LIVES',
                 value: progress.heartRemover,
                 onChanged: (_) => ref.read(progressRepositoryProvider).toggleHeartRemover(),
                 accentColor: themeColors.accentColor,
