@@ -11,6 +11,7 @@ enum GameTheme {
   forest,
   pastel,
   sunset,
+  rainbow,
 }
 
 class ThemeColors {
@@ -21,6 +22,7 @@ class ThemeColors {
   final Color accentDark;
   final LinearGradient bgGradient;
   final bool hasGlow;
+  final List<Color>? arrowPalette;
 
   const ThemeColors({
     required this.background,
@@ -30,6 +32,7 @@ class ThemeColors {
     required this.accentDark,
     required this.bgGradient,
     this.hasGlow = false,
+    this.arrowPalette,
   });
 }
 
@@ -175,6 +178,29 @@ class AppThemes {
             end: Alignment.bottomCenter,
           ),
           hasGlow: true,
+        );
+      case GameTheme.rainbow:
+        return const ThemeColors(
+          background: Color(0xFF12141C),
+          surface: Color(0xFF1E2130),
+          arrowColor: Color(0xFFFF4081),
+          accentColor: Color(0xFF00E5FF),
+          accentDark: Color(0xFF00B0FF),
+          bgGradient: LinearGradient(
+            colors: [Color(0xFF191C2B), Color(0xFF0F1017)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          hasGlow: true,
+          arrowPalette: [
+            Color(0xFFFF5252), // Red
+            Color(0xFFFF9100), // Orange
+            Color(0xFFFFEA00), // Yellow
+            Color(0xFF00E676), // Green
+            Color(0xFF00E5FF), // Cyan
+            Color(0xFF7C4DFF), // Purple
+            Color(0xFFFF4081), // Pink
+          ],
         );
     }
   }

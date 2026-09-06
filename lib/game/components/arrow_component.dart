@@ -123,7 +123,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     _previewPath = null;
     if (wasPreview) return; 
     if (_isAnimating) return;
-    _triggerMove();
+    triggerMove();
   }
 
   @override
@@ -135,7 +135,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     _previewPath = null;
   }
 
-  void _triggerMove() {
+  void triggerMove() {
     if (_isAnimating) return;
     _isAnimating = true;
 
@@ -694,6 +694,11 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       return const Color(0xFF606060);
     }
     final themeColors = AppThemes.getThemeColors(gameState.theme);
+    final palette = themeColors.arrowPalette;
+    if (palette != null && palette.isNotEmpty) {
+      final idx = arrowModel.id.hashCode.abs() % palette.length;
+      return palette[idx];
+    }
     return themeColors.arrowColor;
   }
 

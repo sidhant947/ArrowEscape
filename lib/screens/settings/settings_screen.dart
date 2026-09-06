@@ -70,6 +70,13 @@ class SettingsScreen extends ConsumerWidget {
                 onChanged: (_) => ref.read(progressRepositoryProvider).toggleHeartRemover(),
                 accentColor: themeColors.accentColor,
               ),
+              const SizedBox(height: 14),
+              _buildPreferenceTile(
+                title: 'TAP ASSIST',
+                value: progress.assistMode,
+                onChanged: (_) => ref.read(progressRepositoryProvider).toggleAssistMode(),
+                accentColor: themeColors.accentColor,
+              ),
               const SizedBox(height: 24),
               const Text(
                 'THEME & CUSTOM SKIN',
@@ -137,15 +144,36 @@ class SettingsScreen extends ConsumerWidget {
                               const Icon(Icons.lock, color: AppColors.textMuted, size: 20),
                               const SizedBox(width: 8),
                             ],
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: previewColors.arrowColor,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white24, width: 1),
+                            if (previewColors.arrowPalette != null)
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: const BoxDecoration(
+                                  gradient: SweepGradient(
+                                    colors: [
+                                      Color(0xFFFF5252),
+                                      Color(0xFFFF9100),
+                                      Color(0xFFFFEA00),
+                                      Color(0xFF00E676),
+                                      Color(0xFF00E5FF),
+                                      Color(0xFF7C4DFF),
+                                      Color(0xFFFF4081),
+                                      Color(0xFFFF5252),
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                              )
+                            else
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: previewColors.arrowColor,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white24, width: 1),
+                                ),
                               ),
-                            ),
                             const SizedBox(width: 8),
                             Container(
                               width: 24,

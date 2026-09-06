@@ -1,7 +1,7 @@
-import 'dart:async';
 import 'dart:ui' as ui;
-import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
+import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 
 import '../../data/models/level.dart';
 import '../../data/models/arrow.dart';
@@ -9,7 +9,7 @@ import '../../core/app_themes.dart';
 import '../game_state.dart';
 import 'arrow_component.dart';
 
-class GridComponent extends PositionComponent {
+class GridComponent extends PositionComponent with TapCallbacks {
   final GameState gameState;
   double gridPixelSize;
 
@@ -38,6 +38,50 @@ class GridComponent extends PositionComponent {
   }) : super(position: position);
 
   double get cellSize => gridPixelSize / gameState.level.gridSize;
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    if (!gameState.assistMode) return;
+
+    final localPos = event.localPosition;
+    final c = (localPos.x / cellSize).floor();
+    final r = (localPos.y / cellSize).floor();
+    final gridSize = gameState.level.gridSize;
+
+    if (r < 0 || r >= gridSize || c < 0 || c >= gridSize) return;
+
+    for (final arrow in gameState.arrows) {
+      if (arrow.path.any((pt) => pt[0] == r && pt[1] == c)) {
+        return;
+      }
+    }
+
+    const neighbors = [
+      [-1, 0],
+      [1, 0],
+      [0, -1],
+      [0, 1],
+    ];
+
+    final adjacentArrowIds = <String>{};
+    for (final n in neighbors) {
+      final nr = r + n[0];
+      final nc = c + n[1];
+      if (nr < 0 || nr >= gridSize || nc < 0 || nc >= gridSize) continue;
+
+      for (final arrow in gameState.arrows) {
+        if (arrow.path.any((pt) => pt[0] == nr && pt[1] == nc)) {
+          adjacentArrowIds.add(arrow.id);
+        }
+      }
+    }
+
+    if (adjacentArrowIds.length == 1) {
+      final targetId = adjacentArrowIds.first;
+      final arrowComp = _arrowComponents[targetId];
+      arrowComp?.triggerMove();
+    }
+  }
 
   @override
   Future<void> onLoad() async {

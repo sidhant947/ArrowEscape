@@ -18,6 +18,7 @@ class ProgressRepository extends ChangeNotifier {
   bool _skinsUnlocked = false;
   bool _hapticsEnabled = true;
   bool _heartRemover = false;
+  bool _assistMode = false;
 
   final Map<int, LevelResult> _levelResults = {};
 
@@ -31,6 +32,7 @@ class ProgressRepository extends ChangeNotifier {
   bool get skinsUnlocked => _skinsUnlocked;
   bool get hapticsEnabled => _hapticsEnabled;
   bool get heartRemover => _heartRemover;
+  bool get assistMode => _assistMode;
 
   int getStarsForLevel(int level) => _levelResults[level]?.stars ?? 0;
 
@@ -63,6 +65,7 @@ class ProgressRepository extends ChangeNotifier {
     _skinsUnlocked = _box.get('skinsUnlocked', defaultValue: false);
     _hapticsEnabled = _box.get('hapticsEnabled', defaultValue: true);
     _heartRemover = _box.get('heartRemover', defaultValue: false);
+    _assistMode = _box.get('assistMode', defaultValue: false);
     AudioHapticHelper.hapticsEnabled = _hapticsEnabled;
 
     for (final key in _resultsBox.keys) {
@@ -89,6 +92,7 @@ class ProgressRepository extends ChangeNotifier {
       'skinsUnlocked': _skinsUnlocked,
       'hapticsEnabled': _hapticsEnabled,
       'heartRemover': _heartRemover,
+      'assistMode': _assistMode,
     });
 
     for (final entry in _levelResults.entries) {
@@ -111,6 +115,12 @@ class ProgressRepository extends ChangeNotifier {
 
   Future<void> toggleHeartRemover() async {
     _heartRemover = !_heartRemover;
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> toggleAssistMode() async {
+    _assistMode = !_assistMode;
     await _save();
     notifyListeners();
   }

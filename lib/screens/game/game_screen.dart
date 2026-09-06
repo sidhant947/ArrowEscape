@@ -189,7 +189,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   void _initGame() {
     final progress = ref.read(progressRepositoryProvider);
-    final isLifeFree = widget.gameMode == GameMode.zen || progress.heartRemover;
+    final isLifeFree = widget.gameMode == GameMode.zen ||
+        widget.gameMode == GameMode.timeAttack ||
+        progress.heartRemover;
     _lives = isLifeFree ? 999 : AppConstants.maxLives;
     _showingGameOver = false;
     _gameState?.removeListener(_onGameStateChanged);
@@ -197,8 +199,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
       level: _level,
       theme: progress.selectedTheme,
       heartRemover: progress.heartRemover,
+      assistMode: progress.assistMode,
       onLevelComplete: _onLevelComplete,
-      onGameOver: isLifeFree ? () {} : _onGameOver,
+      onGameOver: _onGameOver,
       onLifeLost: isLifeFree ? () {} : _onLifeLost,
       gameMode: widget.gameMode,
       onCombo: _triggerCombo,
@@ -211,7 +214,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       level: _level,
       gameState: _gameState!,
       onLevelComplete: _onLevelComplete,
-      onGameOver: isLifeFree ? () {} : _onGameOver,
+      onGameOver: _onGameOver,
       onLifeLost: isLifeFree ? () {} : _onLifeLost,
     );
 
@@ -286,6 +289,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   Future<void> _handleRestart() async {
     if (mounted) {
       final isLifeFree = widget.gameMode == GameMode.zen ||
+          widget.gameMode == GameMode.timeAttack ||
           ref.read(progressRepositoryProvider).heartRemover;
       setState(() {
         _showingGameOver = false;
