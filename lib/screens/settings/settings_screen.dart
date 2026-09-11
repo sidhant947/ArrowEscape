@@ -59,22 +59,38 @@ class SettingsScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               _buildPreferenceTile(
                 title: 'HAPTIC FEEDBACK',
+                description: 'Vibrate on arrow taps, moves, and collisions',
                 value: progress.hapticsEnabled,
-                onChanged: (_) => ref.read(progressRepositoryProvider).toggleHaptics(),
+                onChanged: (_) =>
+                    ref.read(progressRepositoryProvider).toggleHaptics(),
                 accentColor: themeColors.accentColor,
               ),
               const SizedBox(height: 14),
               _buildPreferenceTile(
                 title: 'INFINITE LIVES',
+                description: 'Play without losing hearts on blocked moves',
                 value: progress.heartRemover,
-                onChanged: (_) => ref.read(progressRepositoryProvider).toggleHeartRemover(),
+                onChanged: (_) =>
+                    ref.read(progressRepositoryProvider).toggleHeartRemover(),
                 accentColor: themeColors.accentColor,
               ),
               const SizedBox(height: 14),
               _buildPreferenceTile(
                 title: 'TAP ASSIST',
+                description: 'Count taps on empty tiles near arrows as clicks',
                 value: progress.assistMode,
-                onChanged: (_) => ref.read(progressRepositoryProvider).toggleAssistMode(),
+                onChanged: (_) =>
+                    ref.read(progressRepositoryProvider).toggleAssistMode(),
+                accentColor: themeColors.accentColor,
+              ),
+              const SizedBox(height: 14),
+              _buildPreferenceTile(
+                title: 'COMPLEX RANDOM PATHS',
+                description:
+                    'Generate harder random puzzles with less obvious paths',
+                value: progress.complexPaths,
+                onChanged: (_) =>
+                    ref.read(progressRepositoryProvider).toggleComplexPaths(),
                 accentColor: themeColors.accentColor,
               ),
               const SizedBox(height: 24),
@@ -90,7 +106,8 @@ class SettingsScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               ...GameTheme.values.map((theme) {
                 final isSelected = progress.selectedTheme == theme;
-                final isDefaultUnlocked = theme == GameTheme.classic ||
+                final isDefaultUnlocked =
+                    theme == GameTheme.classic ||
                     theme == GameTheme.neon ||
                     theme == GameTheme.retro ||
                     theme == GameTheme.cyber;
@@ -106,18 +123,25 @@ class SettingsScreen extends ConsumerWidget {
                   },
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 14),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 18,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? previewColors.accentColor : AppColors.surfaceLight,
+                        color: isSelected
+                            ? previewColors.accentColor
+                            : AppColors.surfaceLight,
                         width: 2,
                       ),
                       boxShadow: isSelected
                           ? [
                               BoxShadow(
-                                color: previewColors.accentDark.withValues(alpha: 0.4),
+                                color: previewColors.accentDark.withValues(
+                                  alpha: 0.4,
+                                ),
                                 offset: const Offset(0, 4),
                                 blurRadius: 0,
                               ),
@@ -134,14 +158,20 @@ class SettingsScreen extends ConsumerWidget {
                             fontWeight: FontWeight.w900,
                             color: isSelected
                                 ? previewColors.accentColor
-                                : (isLocked ? AppColors.textMuted : AppColors.textPrimary),
+                                : (isLocked
+                                      ? AppColors.textMuted
+                                      : AppColors.textPrimary),
                             letterSpacing: 1.5,
                           ),
                         ),
                         Row(
                           children: [
                             if (isLocked) ...[
-                              const Icon(Icons.lock, color: AppColors.textMuted, size: 20),
+                              const Icon(
+                                Icons.lock,
+                                color: AppColors.textMuted,
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
                             ],
                             if (previewColors.arrowPalette != null)
@@ -171,7 +201,10 @@ class SettingsScreen extends ConsumerWidget {
                                 decoration: BoxDecoration(
                                   color: previewColors.arrowColor,
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white24, width: 1),
+                                  border: Border.all(
+                                    color: Colors.white24,
+                                    width: 1,
+                                  ),
                                 ),
                               ),
                             const SizedBox(width: 8),
@@ -181,7 +214,10 @@ class SettingsScreen extends ConsumerWidget {
                               decoration: BoxDecoration(
                                 gradient: previewColors.bgGradient,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white24, width: 1),
+                                border: Border.all(
+                                  color: Colors.white24,
+                                  width: 1,
+                                ),
                               ),
                             ),
                           ],
@@ -200,32 +236,49 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _buildPreferenceTile({
     required String title,
+    required String description,
     required bool value,
     required ValueChanged<bool> onChanged,
     required Color accentColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.surfaceLight,
-          width: 2,
-        ),
+        border: Border.all(color: AppColors.surfaceLight, width: 1.5),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: AppColors.textPrimary,
-              letterSpacing: 1.5,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                    height: 1.3,
+                  ),
+                ),
+              ],
             ),
           ),
+          const SizedBox(width: 12),
           Switch(
             value: value,
             onChanged: onChanged,
@@ -269,7 +322,9 @@ class _UnlockDialogState extends State<_UnlockDialog> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
         side: BorderSide(
-            color: themeColors.accentColor.withValues(alpha: 0.3), width: 1.5),
+          color: themeColors.accentColor.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -290,10 +345,7 @@ class _UnlockDialogState extends State<_UnlockDialog> {
               const Text(
                 'Unlock all custom themes and premium styling options.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
@@ -302,13 +354,13 @@ class _UnlockDialogState extends State<_UnlockDialog> {
                   foregroundColor: Colors.black,
                   minimumSize: const Size(double.infinity, 48),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onPressed: () async {
                   try {
                     await launchUrl(
-                      Uri.parse(
-                          'https://buymeacoffee.com/sidhant947/e/562696'),
+                      Uri.parse('https://buymeacoffee.com/sidhant947/e/562696'),
                       mode: LaunchMode.externalApplication,
                     );
                   } catch (_) {}
@@ -336,7 +388,9 @@ class _UnlockDialogState extends State<_UnlockDialog> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                        color: themeColors.accentColor, width: 1.5),
+                      color: themeColors.accentColor,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -346,8 +400,10 @@ class _UnlockDialogState extends State<_UnlockDialog> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel',
-                        style: TextStyle(color: AppColors.textSecondary)),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
@@ -355,9 +411,12 @@ class _UnlockDialogState extends State<_UnlockDialog> {
                       backgroundColor: themeColors.accentColor,
                       foregroundColor: Colors.black,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                     ),
                     onPressed: () {
                       final code = _controller.text;
@@ -368,8 +427,8 @@ class _UnlockDialogState extends State<_UnlockDialog> {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content:
-                                  Text('All themes and skins unlocked!')),
+                            content: Text('All themes and skins unlocked!'),
+                          ),
                         );
                       } else {
                         setState(() {
@@ -377,8 +436,10 @@ class _UnlockDialogState extends State<_UnlockDialog> {
                         });
                       }
                     },
-                    child: const Text('Unlock Now',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Unlock Now',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),

@@ -11,6 +11,11 @@ LevelModel generateLevelIsolate(int levelNumber) {
   return LevelGenerator.generateLevel(levelNumber);
 }
 
+@pragma('vm:entry-point')
+LevelModel generateComplexLevelIsolate(int levelNumber) {
+  return LevelGenerator.generateLevel(levelNumber, complexPaths: true);
+}
+
 class LevelRepository {
   static const int cacheVersion = LevelModel.currentVersion;
 
@@ -125,6 +130,21 @@ class LevelRepository {
         preGenerateRangeAsync(levelNumber + 1, 3);
       }
       return syncLevel;
+    }
+  }
+
+  Future<LevelModel> getRandomLevelAsync(int levelNumber,
+      {bool complexPaths = false}) async {
+    if (!complexPaths) {
+      return getLevelAsync(levelNumber, preGenerateNext: false);
+    }
+
+    try {
+      return await compute(generateComplexLevelIsolate, levelNumber)
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      debugPrint('Complex level generation error: $e');
+      return LevelGenerator.generateLevel(levelNumber, complexPaths: true);
     }
   }
 

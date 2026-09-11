@@ -7,19 +7,19 @@ import 'solver.dart';
 import 'mask_generator.dart';
 
 class LevelGenerator {
-  static LevelModel generateLevel(int levelNumber) {
+  static LevelModel generateLevel(int levelNumber, {bool complexPaths = false}) {
     final type = AppConstants.levelTypeFor(levelNumber);
     int gridSize = AppConstants.gridSizeForLevel(levelNumber);
     if (levelNumber == 213) gridSize = 32;
     if (levelNumber == 395) gridSize = 35;
     if (levelNumber == 437) gridSize = 36;
 
-    final seed = levelNumber * 103 + 51;
+    final seed = levelNumber * 103 + 51 + (complexPaths ? 99991 : 0);
     final rng = Random(seed);
 
     final maskShape = _shapeFor(type, rng);
     final mask = MaskGenerator.shapeByName(maskShape.name, gridSize, rng);
-    final params = _paramsFor(levelNumber, type, gridSize, mask);
+    final params = _paramsFor(levelNumber, type, gridSize, mask, complexPaths: complexPaths);
 
     return _generateReverse(
       levelNumber: levelNumber,
@@ -29,6 +29,7 @@ class LevelGenerator {
       type: type,
       rng: rng,
       maskShape: maskShape,
+      complexPaths: complexPaths,
     );
   }
 
@@ -40,6 +41,7 @@ class LevelGenerator {
     required LevelType type,
     required Random rng,
     required MaskShape maskShape,
+    bool complexPaths = false,
   }) {
     final maskCells = mask.map((k) {
       final parts = k.split(',');
@@ -57,7 +59,9 @@ class LevelGenerator {
 
     final double tangleFactor;
     double baseTangle;
-    if (levelNumber <= 14) {
+    if (complexPaths) {
+      baseTangle = 1.0;
+    } else if (levelNumber <= 14) {
       baseTangle = 0.0;
     } else if (levelNumber <= 30) {
       baseTangle = 0.10;
@@ -84,6 +88,12 @@ class LevelGenerator {
       (veryLongMin + 4).clamp(veryLongMin + 1, mask.length),
     );
 
+    if (complexPaths) {
+      veryLongMin = max(6, veryLongMin + 1);
+      longMin = max(4, longMin + 1);
+      veryLongMax = max(veryLongMin + 2, veryLongMax + 2);
+    }
+
     if (maskShape != MaskShape.square) {
       veryLongMin = max(5, (veryLongMin * 0.8).round());
       longMin = max(3, (longMin * 0.8).round());
@@ -97,7 +107,7 @@ class LevelGenerator {
         case _LenTier.long:
           return longMin + rng.nextInt(max(1, veryLongMin - longMin));
         case _LenTier.medium:
-          return 2 + rng.nextInt(max(1, longMin - 1));
+          return (complexPaths ? 3 : 2) + rng.nextInt(max(1, longMin - (complexPaths ? 2 : 1)));
       }
     }
 
@@ -116,7 +126,7 @@ class LevelGenerator {
 
       if (candidates.isEmpty) break;
 
-      _shuffleCandidatesFromCenter(candidates, gridSize, rng);
+      _shuffleCandidates(candidates, gridSize, rng, complexPaths);
 
       final total = veryLongCount + longCount + medCount;
       final _LenTier wantTier;
@@ -124,6 +134,16 @@ class LevelGenerator {
         wantTier = _LenTier.medium;
       } else if (total == 0) {
         wantTier = _LenTier.veryLong;
+      } else if (complexPaths) {
+        final vlRatio = veryLongCount / total;
+        final lRatio = longCount / total;
+        if (vlRatio < 0.45) {
+          wantTier = _LenTier.veryLong;
+        } else if (lRatio < 0.35) {
+          wantTier = _LenTier.long;
+        } else {
+          wantTier = _LenTier.medium;
+        }
       } else {
         final vlRatio = veryLongCount / total;
         final lRatio = longCount / total;
@@ -155,6 +175,7 @@ class LevelGenerator {
           rng: rng,
           gridSize: gridSize,
           tangleFactor: tangleFactor,
+          complexPaths: complexPaths,
         );
 
         if (path != null && path.length >= 2) {
@@ -201,7 +222,7 @@ class LevelGenerator {
         gridSize,
       );
       if (candidates.isEmpty) break;
-      _shuffleCandidatesFromCenter(candidates, gridSize, rng);
+      _shuffleCandidates(candidates, gridSize, rng, complexPaths);
 
       for (final cand in candidates) {
         final path = _growPath(
@@ -214,6 +235,7 @@ class LevelGenerator {
           rng: rng,
           gridSize: gridSize,
           tangleFactor: 0.0,
+          complexPaths: complexPaths,
         );
 
         if (path != null && path.length >= 2) {
@@ -462,8 +484,31 @@ class LevelGenerator {
     );
   }
 
-  static void _shuffleCandidatesFromCenter(
-      List<_Cand> candidates, int gridSize, Random rng) {
+  static int _exitDist(int r, int c, ArrowDirection dir, int gridSize) {
+    switch (dir) {
+      case ArrowDirection.up:
+        return r;
+      case ArrowDirection.down:
+        return gridSize - 1 - r;
+      case ArrowDirection.left:
+        return c;
+      case ArrowDirection.right:
+        return gridSize - 1 - c;
+    }
+  }
+
+  static void _shuffleCandidates(
+      List<_Cand> candidates, int gridSize, Random rng, bool complexPaths) {
+    if (complexPaths) {
+      candidates.sort((a, b) {
+        final exitA = _exitDist(a.row, a.col, a.dir, gridSize);
+        final exitB = _exitDist(b.row, b.col, b.dir, gridSize);
+        final scoreA = -exitA * 2.0 + rng.nextDouble() * 2.0;
+        final scoreB = -exitB * 2.0 + rng.nextDouble() * 2.0;
+        return scoreA.compareTo(scoreB);
+      });
+      return;
+    }
     final centerRow = gridSize / 2;
     final centerCol = gridSize / 2;
     candidates.sort((a, b) {
@@ -503,6 +548,7 @@ class LevelGenerator {
     required Random rng,
     required int gridSize,
     double tangleFactor = 0.0,
+    bool complexPaths = false,
   }) {
     final exitPath = _getExitPathPacked(startRow, startCol, exitDir, gridSize);
     final path = <List<int>>[
@@ -513,8 +559,8 @@ class LevelGenerator {
     var growDir = exitDir.opposite; 
     int straight = 0;
 
-    final double turnBias = 0.65 + tangleFactor * 0.20;
-    final int maxStraight = tangleFactor >= 0.7 ? 2 : 3;
+    final double turnBias = complexPaths ? 0.88 : (0.65 + tangleFactor * 0.20);
+    final int maxStraight = complexPaths ? 2 : (tangleFactor >= 0.7 ? 2 : 3);
 
     for (int step = 1; step < targetLen; step++) {
       final valid = <ArrowDirection>[];
@@ -720,11 +766,12 @@ class LevelGenerator {
   }
 
   static _Params _paramsFor(
-      int level, LevelType type, int gridSize, Set<String> mask) {
+      int level, LevelType type, int gridSize, Set<String> mask,
+      {bool complexPaths = false}) {
     int avgLen;
     int arrowCount;
 
-    if (level <= 3) {
+    if (level <= 3 && !complexPaths) {
       avgLen = 2;
       arrowCount = 4;
     } else {
@@ -741,6 +788,10 @@ class LevelGenerator {
         avgLen = 4;
       } else {
         avgLen = 5;
+      }
+
+      if (complexPaths) {
+        avgLen = max(avgLen, (gridSize > 20 ? 6 : 5));
       }
 
       final totalCells = mask.length;

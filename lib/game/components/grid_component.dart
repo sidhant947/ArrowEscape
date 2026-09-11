@@ -40,6 +40,17 @@ class GridComponent extends PositionComponent with TapCallbacks {
   double get cellSize => gridPixelSize / gameState.level.gridSize;
 
   @override
+  bool containsLocalPoint(Vector2 point) {
+    if (!gameState.assistMode) {
+      return super.containsLocalPoint(point);
+    }
+    return point.x >= -cellSize &&
+        point.x <= size.x + cellSize &&
+        point.y >= -cellSize &&
+        point.y <= size.y + cellSize;
+  }
+
+  @override
   void onTapUp(TapUpEvent event) {
     if (!gameState.assistMode) return;
 
@@ -48,37 +59,63 @@ class GridComponent extends PositionComponent with TapCallbacks {
     final r = (localPos.y / cellSize).floor();
     final gridSize = gameState.level.gridSize;
 
-    if (r < 0 || r >= gridSize || c < 0 || c >= gridSize) return;
+    if (r < -1 || r > gridSize || c < -1 || c > gridSize) return;
 
-    for (final arrow in gameState.arrows) {
-      if (arrow.path.any((pt) => pt[0] == r && pt[1] == c)) {
-        return;
+    if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
+      for (final arrow in gameState.arrows) {
+        if (arrow.path.any((pt) => pt[0] == r && pt[1] == c)) {
+          return;
+        }
       }
     }
 
     const neighbors = [
+      [-1, -1],
       [-1, 0],
-      [1, 0],
+      [-1, 1],
       [0, -1],
       [0, 1],
+      [1, -1],
+      [1, 0],
+      [1, 1],
     ];
 
-    final adjacentArrowIds = <String>{};
+    final maxDistSq = cellSize * cellSize;
+    String? closestArrowId;
+    double minDistanceSq = double.infinity;
+
     for (final n in neighbors) {
       final nr = r + n[0];
       final nc = c + n[1];
       if (nr < 0 || nr >= gridSize || nc < 0 || nc >= gridSize) continue;
 
       for (final arrow in gameState.arrows) {
-        if (arrow.path.any((pt) => pt[0] == nr && pt[1] == nc)) {
-          adjacentArrowIds.add(arrow.id);
+        for (final pt in arrow.path) {
+          if (pt[0] == nr && pt[1] == nc) {
+            final minX = nc * cellSize;
+            final maxX = minX + cellSize;
+            final minY = nr * cellSize;
+            final maxY = minY + cellSize;
+
+            final dx = localPos.x < minX
+                ? minX - localPos.x
+                : (localPos.x > maxX ? localPos.x - maxX : 0.0);
+            final dy = localPos.y < minY
+                ? minY - localPos.y
+                : (localPos.y > maxY ? localPos.y - maxY : 0.0);
+            final distSq = dx * dx + dy * dy;
+
+            if (distSq <= maxDistSq && distSq < minDistanceSq) {
+              minDistanceSq = distSq;
+              closestArrowId = arrow.id;
+            }
+          }
         }
       }
     }
 
-    if (adjacentArrowIds.length == 1) {
-      final targetId = adjacentArrowIds.first;
-      final arrowComp = _arrowComponents[targetId];
+    if (closestArrowId != null) {
+      final arrowComp = _arrowComponents[closestArrowId];
       arrowComp?.triggerMove();
     }
   }
