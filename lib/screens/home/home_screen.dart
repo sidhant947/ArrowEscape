@@ -12,6 +12,7 @@ import '../../core/game_mode.dart';
 import '../../main.dart';
 import '../game/game_screen.dart';
 import '../level_select/level_select_screen.dart';
+import '../how_to_play/how_to_play_screen.dart';
 import '../multiplayer/multiplayer_seed_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -48,19 +49,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     switch (difficulty) {
       case 'easy':
         return AppConstants.randomEasyMin +
-            rng.nextInt(AppConstants.randomEasyMax - AppConstants.randomEasyMin + 1);
+            rng.nextInt(
+              AppConstants.randomEasyMax - AppConstants.randomEasyMin + 1,
+            );
       case 'medium':
         return AppConstants.randomMediumMin +
-            rng.nextInt(AppConstants.randomMediumMax - AppConstants.randomMediumMin + 1);
+            rng.nextInt(
+              AppConstants.randomMediumMax - AppConstants.randomMediumMin + 1,
+            );
       case 'hard':
         return AppConstants.randomHardMin +
-            rng.nextInt(AppConstants.randomHardMax - AppConstants.randomHardMin + 1);
+            rng.nextInt(
+              AppConstants.randomHardMax - AppConstants.randomHardMin + 1,
+            );
       case 'master':
         return AppConstants.randomMasterMin +
-            rng.nextInt(AppConstants.randomMasterMax - AppConstants.randomMasterMin + 1);
+            rng.nextInt(
+              AppConstants.randomMasterMax - AppConstants.randomMasterMin + 1,
+            );
       case 'expert':
         return AppConstants.randomExpertMin +
-            rng.nextInt(AppConstants.randomExpertMax - AppConstants.randomExpertMin + 1);
+            rng.nextInt(
+              AppConstants.randomExpertMax - AppConstants.randomExpertMin + 1,
+            );
       default:
         return 11;
     }
@@ -77,8 +88,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: BorderSide(
-              color: themeColors.accentColor.withValues(alpha: 0.3),
-              width: 1.5),
+            color: themeColors.accentColor.withValues(alpha: 0.3),
+            width: 1.5,
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -137,8 +149,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onPressed: () => Navigator.pop(ctx),
                   child: const Text(
                     'Cancel',
-                    style:
-                        TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ],
@@ -163,7 +177,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (mounted) setState(() => _isNavigating = false);
   }
 
-  void _showArcadeModesSelection(BuildContext context, int currentLevel) {
+  void _showModesSelection(BuildContext context, int currentLevel) {
     final progress = ref.read(progressRepositoryProvider);
     final themeColors = AppThemes.getThemeColors(progress.selectedTheme);
 
@@ -189,7 +203,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 20),
               const Text(
-                'ARCADE MODES',
+                'MODES',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
@@ -198,24 +212,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              ...[GameMode.zen, GameMode.timeAttack].map((mode) {
-                IconData icon;
-                Color color;
-                switch (mode) {
-                  case GameMode.zen:
-                    icon = Icons.spa;
-                    color = Colors.greenAccent;
-                    break;
-                  case GameMode.timeAttack:
-                    icon = Icons.timer;
-                    color = Colors.orangeAccent;
-                    break;
-                  default:
-                    icon = Icons.play_arrow;
-                    color = AppColors.primary;
-                }
-
-                return GestureDetector(
+              ...[
+                (
+                  label: 'ZEN',
+                  description:
+                      'No lives, no timers. Just pure relaxing puzzle solving.',
+                  icon: Icons.spa,
+                  color: Colors.greenAccent,
                   onTap: () async {
                     Navigator.pop(ctx);
                     if (!mounted) return;
@@ -224,13 +227,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => GameScreen(
-                          level: mode == GameMode.timeAttack ? 1 : currentLevel,
-                          gameMode: mode,
+                          level: currentLevel,
+                          gameMode: GameMode.zen,
                         ),
                       ),
                     );
                     if (mounted) setState(() => _isNavigating = false);
                   },
+                ),
+                (
+                  label: 'TIME ATTACK',
+                  description:
+                      'Race against the clock! Escape arrows to gain extra time.',
+                  icon: Icons.timer,
+                  color: Colors.orangeAccent,
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    if (!mounted) return;
+                    setState(() => _isNavigating = true);
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const GameScreen(
+                          level: 1,
+                          gameMode: GameMode.timeAttack,
+                        ),
+                      ),
+                    );
+                    if (mounted) setState(() => _isNavigating = false);
+                  },
+                ),
+                (
+                  label: 'MULTIPLAYER',
+                  description:
+                      'Compete with friends on the exact same puzzle layout.',
+                  icon: Icons.groups_rounded,
+                  color: Colors.cyanAccent,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MultiplayerSeedScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ].map(
+                (item) => GestureDetector(
+                  onTap: item.onTap,
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(16),
@@ -244,10 +289,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.15),
+                            color: item.color.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(icon, color: color, size: 24),
+                          child: Icon(item.icon, color: item.color, size: 24),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -255,7 +300,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                mode.label.toUpperCase(),
+                                item.label,
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
@@ -265,7 +310,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                mode.description,
+                                item.description,
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: AppColors.textSecondary,
@@ -274,12 +319,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ],
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textMuted),
+                        const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 14,
+                          color: AppColors.textMuted,
+                        ),
                       ],
                     ),
                   ),
-                );
-              }),
+                ),
+              ),
             ],
           ),
         ),
@@ -316,8 +365,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   },
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: themeColors.surface,
                     borderRadius: BorderRadius.circular(16),
@@ -379,54 +430,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               const Spacer(flex: 2),
 
-              Icon(
-                Icons.arrow_upward,
-                size: 48,
-                color: AppColors.textPrimary,
-              ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-               .slideY(begin: 0, end: -0.15, duration: 1500.ms, curve: Curves.easeInOut)
-               .then()
-               .shimmer(duration: 1000.ms),
+              Icon(Icons.arrow_upward, size: 48, color: AppColors.textPrimary)
+                  .animate(
+                    onPlay: (controller) => controller.repeat(reverse: true),
+                  )
+                  .slideY(
+                    begin: 0,
+                    end: -0.15,
+                    duration: 1500.ms,
+                    curve: Curves.easeInOut,
+                  )
+                  .then()
+                  .shimmer(duration: 1000.ms),
 
               const SizedBox(height: 20),
 
               FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  AppConstants.appName,
-                  style: const TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textPrimary,
-                    letterSpacing: 2,
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      AppConstants.appName,
+                      style: const TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 800.ms)
+                  .scale(
+                    begin: const Offset(0.9, 0.9),
+                    end: const Offset(1.0, 1.0),
+                    curve: Curves.easeOutBack,
                   ),
-                ),
-              ).animate()
-               .fadeIn(duration: 800.ms)
-               .scale(begin: const Offset(0.9, 0.9), end: const Offset(1.0, 1.0), curve: Curves.easeOutBack),
 
               const SizedBox(height: 12),
 
               const Text(
-                'Slide. Solve. Escape.',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textMuted,
-                  letterSpacing: 2,
-                ),
-              ).animate().fadeIn(delay: 300.ms, duration: 600.ms).slideY(begin: 0.5, end: 0),
+                    'Slide. Solve. Escape.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textMuted,
+                      letterSpacing: 2,
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(delay: 300.ms, duration: 600.ms)
+                  .slideY(begin: 0.5, end: 0),
 
               const Spacer(flex: 3),
 
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
+                padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: Column(
                   children: AnimateList(
                     interval: 100.ms,
                     effects: [
                       FadeEffect(duration: 500.ms),
-                      SlideEffect(begin: const Offset(0, 0.2), end: Offset.zero, curve: Curves.easeOutQuad),
+                      SlideEffect(
+                        begin: const Offset(0, 0.2),
+                        end: Offset.zero,
+                        curve: Curves.easeOutQuad,
+                      ),
                     ],
                     children: [
                       _MenuButton(
@@ -445,56 +512,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ),
                                   ),
                                 );
-                                if (mounted) setState(() => _isNavigating = false);
+                                if (mounted)
+                                  setState(() => _isNavigating = false);
                               },
                         showBorder: false,
                       ),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 10),
 
                       _MenuButton(
                         label: 'LEVELS',
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const LevelSelectScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const LevelSelectScreen(),
+                          ),
                         ),
                       ),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 10),
 
                       _MenuButton(
-                        label: 'ARCADE MODES',
+                        label: 'GAME MODES',
                         onTap: _isNavigating
                             ? null
-                            : () => _showArcadeModesSelection(context, progress.currentLevel),
+                            : () => _showModesSelection(
+                                context,
+                                progress.currentLevel,
+                              ),
                       ),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 10),
 
                       _MenuButton(
                         label: 'RANDOM',
                         onTap: _isNavigating ? null : _showRandomPuzzleDialog,
                       ),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 10),
 
                       _MenuButton(
-                        label: 'MULTIPLAYER',
+                        label: 'HOW TO PLAY',
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const MultiplayerSeedScreen(),
+                            builder: (_) => const HowToPlayScreen(),
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 10),
 
                       _MenuButton(
                         label: 'SETTINGS',
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsScreen(),
+                          ),
                         ),
                       ),
                     ],
@@ -536,15 +611,15 @@ class _MenuButton extends ConsumerWidget {
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 18),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: themeColors.accentColor, width: 1.5),
           boxShadow: [
             BoxShadow(
               color: themeColors.accentDark,
-              offset: const Offset(0, 5),
+              offset: const Offset(0, 4),
               blurRadius: 0,
             ),
           ],
@@ -553,7 +628,7 @@ class _MenuButton extends ConsumerWidget {
           child: Text(
             label,
             style: const TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w900,
               color: AppColors.textPrimary,
               letterSpacing: 1.5,
@@ -660,9 +735,7 @@ class _AppBarIconButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Center(
-          child: Icon(icon, color: iconColor, size: 22),
-        ),
+        child: Center(child: Icon(icon, color: iconColor, size: 22)),
       ),
     );
   }

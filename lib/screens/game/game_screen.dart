@@ -1009,7 +1009,7 @@ class _LevelCompleteDialog extends ConsumerWidget {
               width: 2.5),
           boxShadow: [
             BoxShadow(
-                color: themeColors.accentColor.withValues(alpha: 0.18),
+                color: themeColors.accentDark.withValues(alpha: 0.18),
                 blurRadius: 32),
           ],
         ),
