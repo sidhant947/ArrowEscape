@@ -484,29 +484,10 @@ class LevelGenerator {
     );
   }
 
-  static int _exitDist(int r, int c, ArrowDirection dir, int gridSize) {
-    switch (dir) {
-      case ArrowDirection.up:
-        return r;
-      case ArrowDirection.down:
-        return gridSize - 1 - r;
-      case ArrowDirection.left:
-        return c;
-      case ArrowDirection.right:
-        return gridSize - 1 - c;
-    }
-  }
-
   static void _shuffleCandidates(
       List<_Cand> candidates, int gridSize, Random rng, bool complexPaths) {
     if (complexPaths) {
-      candidates.sort((a, b) {
-        final exitA = _exitDist(a.row, a.col, a.dir, gridSize);
-        final exitB = _exitDist(b.row, b.col, b.dir, gridSize);
-        final scoreA = -exitA * 2.0 + rng.nextDouble() * 2.0;
-        final scoreB = -exitB * 2.0 + rng.nextDouble() * 2.0;
-        return scoreA.compareTo(scoreB);
-      });
+      candidates.shuffle(rng);
       return;
     }
     final centerRow = gridSize / 2;
