@@ -1,0 +1,159 @@
+{
+  "appTitle": "Arrow Escape",
+  "appTagline": "Verschieben. Lösen. Entkommen.",
+  "levelHeader": "LEVEL {level}",
+  "@levelHeader": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "menuPlay": "SPIELEN",
+  "menuLevels": "LEVELS",
+  "menuGameModes": "SPIELMODI",
+  "menuRandom": "ZUFALL",
+  "menuHowToPlay": "SPIELANLEITUNG",
+  "menuSettings": "EINSTELLUNGEN",
+  "randomPuzzleTitle": "Zufälliges Rätsel",
+  "randomPuzzleSubtitle": "Schwierigkeitsgrad wählen",
+  "difficultyEasy": "Einfach",
+  "difficultyMedium": "Mittel",
+  "difficultyHard": "Schwer",
+  "difficultyMaster": "Meister",
+  "difficultyExpert": "Experte",
+  "dialogCancel": "Abbrechen",
+  "modesTitle": "MODI",
+  "modeLevelsTitle": "LEVELS",
+  "modeLevelsDesc": "Wähle ein bereits freigeschaltetes Level aus und spiele es erneut.",
+  "modeRandomTitle": "ZUFALL",
+  "modeRandomDesc": "Generiere benutzerdefinierte Rätsel in 5 Schwierigkeitsstufen.",
+  "modeZenTitle": "ZEN",
+  "modeZenDesc": "Keine Leben, keine Timer. Einfach nur entspanntes Rätsellösen.",
+  "modeTimeAttackTitle": "ZEITRENNEN",
+  "modeTimeAttackDesc": "Wetteifere gegen die Zeit! Befreie Pfeile, um Bonuszeit zu erhalten.",
+  "modeMultiplayerTitle": "MEHRSPIELER",
+  "modeMultiplayerDesc": "Tritt mit Freunden auf exakt demselben Rätsel-Spielfeld an.",
+  "levelsTitle": "Levels",
+  "multiplayerTitle": "MEHRSPIELER",
+  "hostRoomTitle": "RAUM ERSTELLEN",
+  "hostRoomDesc": "Teile diesen Raumcode mit einem Freund, um auf exakt demselben Rätsel-Spielfeld anzutreten!",
+  "tooltipNewCode": "Neuer Code",
+  "tooltipCopyCode": "Code kopieren",
+  "roomCodeCopied": "Raumcode {code} in die Zwischenablage kopiert!",
+  "@roomCodeCopied": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "startMatch": "SPIEL STARTEN",
+  "joinRoomTitle": "RAUM BEITRETEN",
+  "joinRoomDesc": "Gib einen Raumcode ein oder füge ihn ein, um dem Spiel beizutreten.",
+  "joinRoomHint": "z. B. ROOM-849201",
+  "joinRoomErrorEmpty": "Bitte gib einen Raumcode ein",
+  "joinMatch": "SPIEL BEITRETEN",
+  "settingsTitle": "EINSTELLUNGEN",
+  "themeSectionTitle": "DESIGN & BENUTZERDEFINIERTER SKIN",
+  "preferencesSectionTitle": "EINSTELLUNGEN",
+  "prefHapticsTitle": "HAPTISCHES FEEDBACK",
+  "prefHapticsDesc": "Vibration bei Pfeiltipps, Zügen und Kollisionen",
+  "prefInfiniteLivesTitle": "UNENDLICHE LEBEN",
+  "prefInfiniteLivesDesc": "Spielen ohne Herzverlust bei ungültigen Zügen",
+  "prefTapAssistTitle": "TIPP-UNTERSTÜTZUNG",
+  "prefTapAssistDesc": "Tippen auf leere Felder nahe Pfeilen als Klicks werten",
+  "unlockThemeTitle": "Designs & Skins freischalten",
+  "unlockThemeDesc": "Schalte alle benutzerdefinierten Designs und Premium-Stile frei.",
+  "getUnlockCode": "Freischaltcode anfordern",
+  "enterUnlockCodeHint": "Freischaltcode eingeben",
+  "unlockSuccess": "Alle Designs und Skins freigeschaltet!",
+  "unlockErrorInvalid": "Ungültiger Freischaltcode",
+  "unlockNow": "Jetzt freischalten",
+  "howToPlayTitle": "SPIELANLEITUNG",
+  "sectionTheBasics": "DIE GRUNDLAGEN",
+  "guideCoreObjectiveTitle": "Hauptziel",
+  "guideCoreObjectiveDesc": "Dein Ziel ist es, das gesamte Spielfeld zu räumen, indem du jeden Pfeil vom Brett lenkst. Wenn sich keine Pfeile mehr auf dem Brett befinden, ist das Level abgeschlossen.",
+  "guideMovementTitle": "Pfeilbewegung",
+  "guideMovementDesc": "Tippe auf einen beliebigen Pfeil, um ihn zu starten. Pfeile gleiten exakt in die Richtung vorwärts, in die ihre Spitze zeigt: Oben, Unten, Links oder Rechts. Selbst wenn ein Pfeil einen gebogenen oder gewundenen Körper hat, verlässt er das Feld immer in Richtung seiner Spitze.",
+  "guideObstaclesTitle": "Hindernisse & Kollisionen",
+  "guideObstaclesDesc": "Ein Pfeil kann nur entkommen, wenn sein kompletter Austrittspfad völlig frei ist. Steht ein anderer Pfeil im Weg, wackelt der angetippte Pfeil und bleibt an Ort und Stelle.",
+  "guideLivesTitle": "Leben & Gesundheit",
+  "guideLivesDesc": "Im Klassik-Modus startest du mit 3 Herzen. Das Antippen eines blockierten Pfeils kostet 1 Herz. Wenn alle 3 Herzen aufgebraucht sind, musst du das Level neu starten. Du kannst unendliche Leben jederzeit in den Einstellungen aktivieren.",
+  "sectionBoardElements": "SPIELBRETT-ELEMENTE",
+  "guideTurnDotsTitle": "Drehpunkte (Umlenker)",
+  "guideTurnDotsDesc": "Halte Ausschau nach kreisrundem Punkten auf leeren Feldern, die mit kleinen Pfeilen markiert sind. Wenn ein gleitender Pfeil einen Drehpunkt kreuzt, schwenkt er sofort in die Richtung des Punktes, verschlingt diesen und eröffnet so unerwartete Fluchtwege.",
+  "guideCombosTitle": "Kombos & Serien",
+  "guideCombosDesc": "Löse Pfeile in schneller Folge (innerhalb von 1,5 Sekunden) aus, um Kombos auszulösen. Das Aneinanderreihen aufeinanderfolgender Manöver erzeugt Schwung und bringt Kombo-Multiplikatoren.",
+  "sectionGameModes": "SPIELMODI",
+  "guideClassicModeTitle": "Klassik-Modus",
+  "guideClassicModeDesc": "Der klassische Kampagnenfortschritt. Spiele dich durch handgemachte und prozedurale Level mit steigender Größe, Formmasken und Pfadkomplexität – mit 3 Herzen.",
+  "guideZenModeTitle": "Zen-Modus",
+  "guideZenModeDesc": "Purer Genuss ohne Stress. Keine Herzen verlieren, kein Zeitlimit und keine Niederlagen. Ideal zum Abschalten und Üben komplexer Spielfelder.",
+  "guideTimeAttackTitle": "Zeitrennen",
+  "guideTimeAttackDesc": "Rasanter Wettlauf gegen die Zeit! Jeder erfolgreich befreite Pfeil bringt dir wertvolle Bonussekunden für deinen Countdown zurück.",
+  "guideMultiplayerTitle": "Mehrspieler-Räume",
+  "guideMultiplayerDesc": "Erstelle oder trete über Raumcodes bei. Beide Spieler treten auf exakt demselben zufälligen Spielfeld an, um zu sehen, wer das Brett am schnellsten löst.",
+  "guideRandomPuzzlesTitle": "Zufällige Rätsel",
+  "guideRandomPuzzlesDesc": "Generiere unendlich viele Rätsel auf Abruf in den Schwierigkeiten Einfach, Mittel, Schwer, Meister und Experte, ohne deinen Kampagnenfortschritt zu beeinflussen.",
+  "sectionProStrategies": "PROFI-STRATEGIEN",
+  "guideUnpeelTitle": "Von außen nach innen abtragen",
+  "guideUnpeelDesc": "Beginne damit, die Ränder abzusuchen. Pfeile, die direkt nach außen in den leeren Raum zeigen, können immer sofort entkommen und schaffen wichtige Spuren frei.",
+  "guideTraceBlockersTitle": "Blockierer rückwärts verfolgen",
+  "guideTraceBlockersDesc": "Wenn ein Pfeil blockiert ist, ermittle, welcher Pfeil ihn blockiert, und dann, was wiederum diesen zweiten Pfeil blockiert. Das Entfernen des letzten Pfeil in der Kette befreit alles dahinter.",
+  "guideEnableTapAssistTitle": "Tipp-Unterstützung aktivieren",
+  "guideEnableTapAssistDesc": "Wenn du auf kleineren Bildschirmen spielst oder dazu neigst, zwischen engen Pfeilsegmenten zu tippen, aktiviere die Tipp-Unterstützung in den Einstellungen, um Berührungen automatisch dem nächstgelegenen Pfeil zuzuordnen.",
+  "leaveLevelTitle": "Level verlassen?",
+  "leaveLevelDesc": "Dein aktueller Levelfortschritt geht verloren.",
+  "dialogResume": "Fortsetzen",
+  "dialogLeave": "Verlassen",
+  "comboBanner": "{combo} x KOMBO",
+  "@comboBanner": {
+    "placeholders": {
+      "combo": {
+        "type": "int"
+      }
+    }
+  },
+  "bonusTimeBanner": "+15s",
+  "scoreTitle": "Punktzahl: {score}",
+  "@scoreTitle": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
+  "randomModeTitle": "Zufallsmodus",
+  "levelNumberTitle": "Level {level}",
+  "@levelNumberTitle": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "levelCompleteTitle": "Level geschafft!",
+  "gameFinishedTitle": "Du hast das Spiel durchgespielt!",
+  "gameFinishedDesc": "Herzlichen Glückwunsch! Du hast alle 500 Herausforderungen gelöst. Freue dich auf bald kommende Level!",
+  "nextLevel": "Nächstes Level",
+  "home": "Hauptmenü",
+  "buyMeACoffee": "Spendiere mir einen Kaffee",
+  "timesUp": "Die Zeit ist um!",
+  "outOfTime": "Zeit abgelaufen!",
+  "outOfLives": "Keine Leben mehr!",
+  "timeAttackStats": "Gelöste Rätsel: {score}\nLetztes Level: {level}",
+  "@timeAttackStats": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      },
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "startNewRun": "Neuen Spieldurchlauf starten",
+  "restartLevel": "Level neu starten",
+  "loadingLevel": "LEVEL WIRD GELADEN..."
+}
