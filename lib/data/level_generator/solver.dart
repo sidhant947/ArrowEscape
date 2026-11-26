@@ -6,22 +6,23 @@ class LevelSolver {
   static const int maxStates = 5000; 
 
   static List<String>? solve(LevelModel level, [int maxStatesLimit = maxStates]) {
-    final gridSize = level.gridSize;
+    final rows = level.rows;
+    final cols = level.cols;
     final arrows = level.arrows;
     final orphanDots = level.orphanDots;
 
-    final board = Uint16List(gridSize * gridSize);
+    final board = Uint16List(rows * cols);
     for (int i = 0; i < arrows.length; i++) {
       final arrow = arrows[i];
       for (final pt in arrow.path) {
-        board[pt[0] * gridSize + pt[1]] = i + 1;
+        board[pt[0] * cols + pt[1]] = i + 1;
       }
     }
 
-    final orphanTypes = Uint8List(gridSize * gridSize);
-    final activeOrphans = List<bool>.filled(gridSize * gridSize, false);
+    final orphanTypes = Uint8List(rows * cols);
+    final activeOrphans = List<bool>.filled(rows * cols, false);
     for (final od in orphanDots) {
-      final idx = od.row * gridSize + od.col;
+      final idx = od.row * cols + od.col;
       orphanTypes[idx] = od.type.index;
       activeOrphans[idx] = true;
     }
@@ -34,14 +35,14 @@ class LevelSolver {
     }
     int dotHash = orphanDots.length * 997;
     for (final od in orphanDots) {
-      dotHash ^= od.key.hashCode;
+      dotHash ^= (od.row * cols + od.col).hashCode;
     }
 
-    final visited = <String>{};
+    final visited = <int>{};
     final path = <String>[];
     int statesVisited = 0;
 
-    final exitVisited = Uint32List(gridSize * gridSize);
+    final exitVisited = Uint32List(rows * cols);
     int exitToken = 0;
 
     void undoGreedy(List<int> greedyList) {
@@ -49,7 +50,7 @@ class LevelSolver {
         final idx = greedyList[k];
         path.removeLast();
         for (final pt in arrows[idx].path) {
-          board[pt[0] * gridSize + pt[1]] = idx + 1;
+          board[pt[0] * cols + pt[1]] = idx + 1;
         }
         arrowHash ^= arrows[idx].id.hashCode;
         activeArrows[idx] = true;
@@ -71,7 +72,7 @@ class LevelSolver {
             exitVisited.fillRange(0, exitVisited.length, 0);
             exitToken = 1;
           }
-          final consumed = _simulateExit(i, gridSize, board, activeOrphans, orphanTypes, arrows, exitVisited, exitToken);
+          final consumed = _simulateExit(i, rows, cols, board, activeOrphans, orphanTypes, arrows, exitVisited, exitToken);
           if (consumed == null) continue;
 
           bool consumesRedirector = false;
@@ -87,13 +88,12 @@ class LevelSolver {
             final id = arrows[i].id;
             arrowHash ^= id.hashCode;
             for (final pt in arrows[i].path) {
-              board[pt[0] * gridSize + pt[1]] = 0;
+              board[pt[0] * cols + pt[1]] = 0;
             }
             for (final idx in consumed) {
               if (activeOrphans[idx]) {
                 activeOrphans[idx] = false;
-                final odKey = '${idx ~/ gridSize},${idx % gridSize}';
-                dotHash ^= odKey.hashCode;
+                dotHash ^= idx.hashCode;
               }
             }
             path.add(id);
@@ -105,12 +105,11 @@ class LevelSolver {
 
       if (path.length == arrows.length) return true;
 
-      final hash = '$arrowHash|$dotHash';
-      if (visited.contains(hash)) {
+      final hash = ((arrowHash & 0xFFFFFFFF) << 32) | (dotHash & 0xFFFFFFFF);
+      if (!visited.add(hash)) {
         undoGreedy(greedyCleared);
         return false;
       }
-      visited.add(hash);
       statesVisited++;
 
       for (int i = 0; i < arrows.length; i++) {
@@ -121,7 +120,7 @@ class LevelSolver {
           exitVisited.fillRange(0, exitVisited.length, 0);
           exitToken = 1;
         }
-        final consumed = _simulateExit(i, gridSize, board, activeOrphans, orphanTypes, arrows, exitVisited, exitToken);
+        final consumed = _simulateExit(i, rows, cols, board, activeOrphans, orphanTypes, arrows, exitVisited, exitToken);
         if (consumed == null) continue;
 
         activeArrows[i] = false;
@@ -129,7 +128,7 @@ class LevelSolver {
         arrowHash ^= id.hashCode;
 
         for (final pt in arrows[i].path) {
-          board[pt[0] * gridSize + pt[1]] = 0;
+          board[pt[0] * cols + pt[1]] = 0;
         }
 
         final deactivated = <int>[];
@@ -137,8 +136,7 @@ class LevelSolver {
           if (activeOrphans[idx]) {
             activeOrphans[idx] = false;
             deactivated.add(idx);
-            final odKey = '${idx ~/ gridSize},${idx % gridSize}';
-            dotHash ^= odKey.hashCode;
+            dotHash ^= idx.hashCode;
           }
         }
 
@@ -149,11 +147,10 @@ class LevelSolver {
         path.removeLast();
         for (final idx in deactivated) {
           activeOrphans[idx] = true;
-          final odKey = '${idx ~/ gridSize},${idx % gridSize}';
-          dotHash ^= odKey.hashCode;
+          dotHash ^= idx.hashCode;
         }
         for (final pt in arrows[i].path) {
-          board[pt[0] * gridSize + pt[1]] = i + 1;
+          board[pt[0] * cols + pt[1]] = i + 1;
         }
         arrowHash ^= id.hashCode;
         activeArrows[i] = true;
@@ -169,7 +166,8 @@ class LevelSolver {
 
   static List<int>? _simulateExit(
       int arrowIdx,
-      int gridSize,
+      int rows,
+      int cols,
       Uint16List board,
       List<bool> activeOrphans,
       Uint8List orphanTypes,
@@ -184,8 +182,8 @@ class LevelSolver {
     int nc = head[1] + d[1];
     final consumed = <int>[];
 
-    while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
-      final idx = nr * gridSize + nc;
+    while (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+      final idx = nr * cols + nc;
       if (exitVisited[idx] == token) return null;
       exitVisited[idx] = token;
 

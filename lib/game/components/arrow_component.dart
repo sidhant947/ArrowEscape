@@ -1,6 +1,7 @@
+import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/audio_haptic_helper.dart';
 import '../../core/app_themes.dart';
@@ -41,6 +42,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   double? _cachedTailDist;
   Path? _cachedBodyPath;
   Path? _cachedCaretPath;
+  ui.Picture? _cachedStaticPicture;
 
   void _invalidateCache() {
     _cachedPathPx = null;
@@ -50,20 +52,19 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     _cachedTailDist = null;
     _cachedBodyPath = null;
     _cachedCaretPath = null;
+    _cachedStaticPicture?.dispose();
+    _cachedStaticPicture = null;
     _computeBounds();
   }
 
+  @override
+  void onRemove() {
+    _cachedStaticPicture?.dispose();
+    _cachedStaticPicture = null;
+    super.onRemove();
+  }
+
   static final Paint _bodyPaint = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round;
-
-  static final Paint _glowPaintOuter = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round;
-
-  static final Paint _glowPaintInner = Paint()
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round
     ..strokeJoin = StrokeJoin.round;
@@ -73,7 +74,9 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     ..strokeCap = StrokeCap.round
     ..strokeJoin = StrokeJoin.round;
 
-  static final Paint _headPaint = Paint()
+  static final Paint _headPaint = Paint()..style = PaintingStyle.fill;
+
+  static final Paint _headStrokePaint = Paint()
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round
     ..strokeJoin = StrokeJoin.round;
@@ -83,13 +86,13 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     required this.cellSize,
     required this.gameState,
     this.onExitCompleted,
-  }) : super(size: Vector2.all(cellSize * gameState.level.gridSize)) {
+  }) : super(size: Vector2(cellSize * gameState.level.cols, cellSize * gameState.level.rows)) {
     _computeBounds();
   }
 
   void updateCellSize(double newSize) {
     cellSize = newSize;
-    size = Vector2.all(newSize * gameState.level.gridSize);
+    size = Vector2(newSize * gameState.level.cols, newSize * gameState.level.rows);
     _invalidateCache();
   }
 
@@ -191,7 +194,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
     ArrowDirection currentDir = arrowModel.direction;
     final head = arrowModel.path[0];
-    final gridSize = gameState.level.gridSize;
+    final rows = gameState.level.rows;
+    final cols = gameState.level.cols;
     final pts = <Offset>[];
     var d = currentDir.delta;
     int nr = head[0] + d[0];
@@ -199,7 +203,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     final visited = <String>{};
     bool hasDeflection = false;
 
-    while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+    while (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
       final key = '$nr,$nc';
       if (visited.contains(key)) break;
       visited.add(key);
@@ -229,7 +233,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
 
     if (!hasDeflection) return null;
 
-    final int exitExtCount = gridSize + 5;
+    final int exitExtCount = (rows > cols ? rows : cols) + 5;
     for (int i = 0; i <= exitExtCount; i++) {
       pts.add(Offset((nc + d[1] * i + 0.5) * cellSize,
                      (nr + d[0] * i + 0.5) * cellSize));
@@ -241,32 +245,20 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
   List<Offset> _buildBlockedExtension() {
     ArrowDirection currentDir = arrowModel.direction;
     final head = arrowModel.path[0];
-    final gridSize = gameState.level.gridSize;
+    final rows = gameState.level.rows;
+    final cols = gameState.level.cols;
     final pts = <Offset>[];
     var d = currentDir.delta;
     int nr = head[0] + d[0];
     int nc = head[1] + d[1];
     final visited = <String>{};
 
-    while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+    while (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
       final key = '$nr,$nc';
       if (visited.contains(key)) break;
       visited.add(key);
 
-      bool occupied = false;
-      for (final other in gameState.arrows) {
-        if (other.id == arrowModel.id) continue;
-        if (other.state == ArrowState.sliding) continue;
-        for (final pt in other.path) {
-          if (pt[0] == nr && pt[1] == nc) {
-            occupied = true;
-            break;
-          }
-        }
-        if (occupied) break;
-      }
-
-      if (occupied) {
+      if (gameState.isCellOccupied(nr, nc, arrowModel.id)) {
         break;
       }
 
@@ -370,11 +362,50 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     }
   }
 
+  void _renderStaticArrow(Canvas canvas) {
+    _cachedPathPx ??= arrowModel.path
+        .map((pt) => Offset((pt[1] + 0.5) * cellSize, (pt[0] + 0.5) * cellSize))
+        .toList();
+    final pts = _cachedPathPx!;
+    if (pts.isEmpty) return;
+
+    final mainColor = _color();
+    final sw = cellSize * 0.13;
+
+    if (_cachedBodyPath == null) {
+      final path = Path()..moveTo(pts.first.dx, pts.first.dy);
+      for (int i = 1; i < pts.length; i++) {
+        path.lineTo(pts[i].dx, pts[i].dy);
+      }
+      _cachedBodyPath = path;
+    }
+
+    _bodyPaint
+      ..color = mainColor
+      ..strokeWidth = sw;
+    canvas.drawPath(_cachedBodyPath!, _bodyPaint);
+
+    _drawHead(canvas, pts, mainColor, sw);
+  }
+
   @override
   void render(Canvas canvas) {
     if (arrowModel.path.isEmpty) return;
 
+    final bool isAnimatingNow = _isExiting || _isBlockedAnimating;
     final bool hasPressScale = _pressScale != 1.0;
+
+    if (!isAnimatingNow && !hasPressScale && !_isPreviewMode) {
+      if (_cachedStaticPicture == null) {
+        final recorder = ui.PictureRecorder();
+        final recCanvas = Canvas(recorder);
+        _renderStaticArrow(recCanvas);
+        _cachedStaticPicture = recorder.endRecording();
+      }
+      canvas.drawPicture(_cachedStaticPicture!);
+      return;
+    }
+
     if (hasPressScale) {
       final head = arrowModel.path[0];
       final center = Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
@@ -390,10 +421,8 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     final pathPx = _cachedPathPx!;
 
     final List<Offset> pts;
-    final bool isAnimatingNow = _isExiting || _isBlockedAnimating;
 
     if (isAnimatingNow) {
-      
       if (_cachedTrack == null) {
         final delta = arrowModel.direction.delta;
         final headPx = pathPx.first;
@@ -404,7 +433,10 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
           track.addAll(_deflectedExtension!);
           extCount = _deflectedExtension!.length;
         } else {
-          extCount = gameState.level.gridSize + 2;
+          final maxDim = gameState.level.rows > gameState.level.cols
+              ? gameState.level.rows
+              : gameState.level.cols;
+          extCount = maxDim + 2;
           for (int i = extCount; i >= 1; i--) {
             track.add(headPx + Offset(delta[1] * i * cellSize, delta[0] * i * cellSize));
           }
@@ -457,7 +489,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
         }
       }
     } else {
-      
       pts = pathPx;
     }
 
@@ -481,20 +512,6 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
         _cachedBodyPath = path;
       }
       bodyPath = _cachedBodyPath!;
-    }
-
-    final themeColors = AppThemes.getThemeColors(gameState.theme);
-
-    if (themeColors.hasGlow) {
-      _glowPaintOuter
-        ..color = mainColor.withValues(alpha: 0.15)
-        ..strokeWidth = sw * 2.2;
-      canvas.drawPath(bodyPath, _glowPaintOuter);
-
-      _glowPaintInner
-        ..color = mainColor.withValues(alpha: 0.25)
-        ..strokeWidth = sw * 1.5;
-      canvas.drawPath(bodyPath, _glowPaintInner);
     }
 
     if (isAnimatingNow) {
@@ -535,40 +552,55 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
       caretPath = _cachedCaretPath!;
     }
 
-    _headPaint
-      ..color = mainColor
-      ..strokeWidth = sw;
+    _headPaint.color = mainColor;
     canvas.drawPath(caretPath, _headPaint);
+
+    _headStrokePaint
+      ..color = mainColor
+      ..strokeWidth = cellSize * 0.035;
+    canvas.drawPath(caretPath, _headStrokePaint);
   }
 
   Path _buildCaretPath(List<Offset> pts, double sw) {
-    final prev = pts.length > 1 ? pts[1] : pts.first;
-    final dv = pts.first - prev;
-    final len = dv.distance;
+    final double dx, dy;
+    if (_isExiting || _isBlockedAnimating) {
+      final prev = pts.length > 1 ? pts[1] : pts.first;
+      final dv = pts.first - prev;
+      final len = dv.distance;
+      if (len > 0.01) {
+        dx = dv.dx / len;
+        dy = dv.dy / len;
+      } else {
+        final d = arrowModel.direction.delta;
+        dx = d[1].toDouble();
+        dy = d[0].toDouble();
+      }
+    } else {
+      final d = arrowModel.direction.delta;
+      dx = d[1].toDouble();
+      dy = d[0].toDouble();
+    }
 
-    final d = arrowModel.direction.delta;
-    final dx = len > 0.01 ? dv.dx / len : d[1].toDouble();
-    final dy = len > 0.01 ? dv.dy / len : d[0].toDouble();
-
-    final tip = pts.first + Offset(dx * cellSize * 0.3, dy * cellSize * 0.3);
-
-    final hd = cellSize * 0.25; 
-    final hw = cellSize * 0.18; 
-
-    final base = tip - Offset(dx * hd, dy * hd);
-    final px = -dy, py = dx; 
+    final tip = pts.first + Offset(dx * cellSize * 0.35, dy * cellSize * 0.35);
+    final px = -dy, py = dx;
+    final hw = cellSize * 0.22;
+    final wingBase = pts.first - Offset(dx * cellSize * 0.04, dy * cellSize * 0.04);
+    final notch = pts.first + Offset(dx * cellSize * 0.04, dy * cellSize * 0.04);
 
     return Path()
-      ..moveTo(base.dx + px * hw, base.dy + py * hw)
-      ..lineTo(tip.dx, tip.dy)
-      ..lineTo(base.dx - px * hw, base.dy - py * hw);
+      ..moveTo(tip.dx, tip.dy)
+      ..lineTo(wingBase.dx + px * hw, wingBase.dy + py * hw)
+      ..lineTo(notch.dx, notch.dy)
+      ..lineTo(wingBase.dx - px * hw, wingBase.dy - py * hw)
+      ..close();
   }
 
   List<Offset>? _buildPreviewPath() {
     final orphanDots = gameState.orphanDots;
     ArrowDirection currentDir = arrowModel.direction;
     final head = arrowModel.path[0];
-    final gridSize = gameState.level.gridSize;
+    final rows = gameState.level.rows;
+    final cols = gameState.level.cols;
     final pts = <Offset>[];
 
     final headPx = Offset((head[1] + 0.5) * cellSize, (head[0] + 0.5) * cellSize);
@@ -579,7 +611,7 @@ class ArrowComponent extends PositionComponent with TapCallbacks {
     int nc = head[1] + d[1];
     final visited = <String>{};
 
-    while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+    while (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
       final key = '$nr,$nc';
       if (visited.contains(key)) break;
       visited.add(key);

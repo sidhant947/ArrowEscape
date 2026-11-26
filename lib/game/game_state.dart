@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'dart:typed_data';
+import 'package:material_ui/material_ui.dart';
 import '../data/models/arrow.dart';
 import '../data/models/level.dart';
 import '../core/constants.dart';
@@ -20,6 +21,8 @@ class GameState extends ChangeNotifier {
   final bool assistMode;
 
   late Map<String, OrphanDotType> _orphanDots;
+  late Uint16List _board;
+  final Map<String, int> _arrowIndices = {};
 
   final Map<String, List<OrphanDot>> _consumedDotsByArrow = {};
 
@@ -54,6 +57,30 @@ class GameState extends ChangeNotifier {
     _arrows = level.arrows.map((a) => a.copyWith()).toList();
     _orphanDots = {for (final od in level.orphanDots) od.key: od.type};
     _lives = (gameMode == GameMode.zen || gameMode == GameMode.timeAttack || heartRemover) ? 999 : AppConstants.maxLives;
+    _initBoard();
+  }
+
+  void _initBoard() {
+    final rows = _currentLevel.rows;
+    final cols = _currentLevel.cols;
+    _board = Uint16List(rows * cols);
+    _arrowIndices.clear();
+    for (int i = 0; i < _arrows.length; i++) {
+      _arrowIndices[_arrows[i].id] = i + 1;
+      for (final pt in _arrows[i].path) {
+        _board[pt[0] * cols + pt[1]] = i + 1;
+      }
+    }
+  }
+
+  bool isCellOccupied(int r, int c, [String? ignoreArrowId]) {
+    final cols = _currentLevel.cols;
+    final val = _board[r * cols + c];
+    if (val == 0) return false;
+    if (ignoreArrowId != null && val == (_arrowIndices[ignoreArrowId] ?? 0)) {
+      return false;
+    }
+    return true;
   }
 
   List<ArrowModel> get arrows => _arrows;
@@ -154,6 +181,10 @@ class GameState extends ChangeNotifier {
     _lastExitTime = now;
 
     _arrows[index] = arrow.copyWith(state: ArrowState.sliding);
+    final cols = _currentLevel.cols;
+    for (final pt in arrow.path) {
+      _board[pt[0] * cols + pt[1]] = 0;
+    }
     _recordConsumedDots(arrowId, exitInfo.consumed);
     
     for (final k in exitInfo.consumed) {
@@ -194,14 +225,16 @@ class GameState extends ChangeNotifier {
   _ExitInfo _computeExitInfo(ArrowModel arrow) {
     ArrowDirection currentDir = arrow.direction;
     final head = arrow.path[0];
-    final gridSize = _currentLevel.gridSize;
+    final rows = _currentLevel.rows;
+    final cols = _currentLevel.cols;
     var d = currentDir.delta;
     int nr = head[0] + d[0];
     int nc = head[1] + d[1];
     final consumed = <String>[];
     final visited = <String>{};
+    final arrowVal = _arrowIndices[arrow.id] ?? 0;
 
-    while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+    while (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
       final key = '$nr,$nc';
       if (visited.contains(key)) return const _ExitInfo(true);
       visited.add(key);
@@ -219,16 +252,10 @@ class GameState extends ChangeNotifier {
           currentDir = ArrowDirection.right;
         }
       } else {
-        bool hit = false;
-        for (final other in _arrows) {
-          if (other.id == arrow.id) continue;
-          if (other.state == ArrowState.sliding) continue;
-          for (final pt in other.path) {
-            if (pt[0] == nr && pt[1] == nc) { hit = true; break; }
-          }
-          if (hit) break;
+        final val = _board[nr * cols + nc];
+        if (val != 0 && val != arrowVal) {
+          return const _ExitInfo(true);
         }
-        if (hit) return const _ExitInfo(true);
       }
 
       d = currentDir.delta;
@@ -241,6 +268,7 @@ class GameState extends ChangeNotifier {
   void resetLevel() {
     _arrows = _currentLevel.arrows.map((a) => a.copyWith(state: ArrowState.idle)).toList();
     _orphanDots = {for (final od in _currentLevel.orphanDots) od.key: od.type};
+    _initBoard();
     _consumedDotsByArrow.clear();
     _lives = (gameMode == GameMode.zen || gameMode == GameMode.timeAttack || heartRemover) ? 999 : AppConstants.maxLives;
     _livesLost = 0;

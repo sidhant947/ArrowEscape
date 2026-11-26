@@ -11,6 +11,10 @@ LevelModel generateLevelIsolate(int levelNumber) {
   return LevelGenerator.generateLevel(levelNumber);
 }
 
+LevelModel generateRandomLevelIsolate(String difficulty) {
+  return LevelGenerator.generateRandomLevel(difficulty: difficulty);
+}
+
 class LevelRepository {
   static const int cacheVersion = LevelModel.currentVersion;
 
@@ -73,7 +77,7 @@ class LevelRepository {
 
   Future<void> preGenerateAsync(int levelNumber) async {
     if (isCached(levelNumber)) return;
-    if (_generating.contains(levelNumber)) return;
+    if (_generating.isNotEmpty) return;
     _generating.add(levelNumber);
 
     try {
@@ -81,7 +85,7 @@ class LevelRepository {
       if (cached != null) return;
 
       final level = await compute(generateLevelIsolate, levelNumber)
-          .timeout(const Duration(seconds: 12));
+          .timeout(const Duration(seconds: 15));
       _cache[levelNumber] = level;
       _saveToDisk(levelNumber, level);
     } catch (e) {
@@ -92,9 +96,8 @@ class LevelRepository {
   }
 
   Future<void> preGenerateRangeAsync(int from, int count) async {
-    for (int i = from; i < from + count; i++) {
-      unawaited(preGenerateAsync(i));
-    }
+    if (count <= 0) return;
+    unawaited(preGenerateAsync(from));
   }
 
   Future<LevelModel> getLevelAsync(int levelNumber,
@@ -102,33 +105,44 @@ class LevelRepository {
     final cached = _tryLoadCached(levelNumber);
     if (cached != null) {
       if (preGenerateNext) {
-        preGenerateRangeAsync(levelNumber + 1, 3);
+        preGenerateRangeAsync(levelNumber + 1, 1);
       }
       return cached;
     }
 
     try {
       final level = await compute(generateLevelIsolate, levelNumber)
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 25));
       _cache[levelNumber] = level;
       _saveToDisk(levelNumber, level);
 
       if (preGenerateNext) {
-        preGenerateRangeAsync(levelNumber + 1, 3);
+        preGenerateRangeAsync(levelNumber + 1, 1);
       }
       return level;
     } catch (e) {
-      debugPrint(
-          'Isolate generation failed/timed out, generating synchronously: $e');
-      final syncLevel = getLevel(levelNumber);
+      debugPrint('Isolate generation failed: $e');
+      final level = await compute(generateLevelIsolate, levelNumber);
+      _cache[levelNumber] = level;
+      _saveToDisk(levelNumber, level);
       if (preGenerateNext) {
-        preGenerateRangeAsync(levelNumber + 1, 3);
+        preGenerateRangeAsync(levelNumber + 1, 1);
       }
-      return syncLevel;
+      return level;
     }
   }
 
-  Future<LevelModel> getRandomLevelAsync(int levelNumber) async {
+  Future<LevelModel> getRandomLevelAsync(int levelNumber,
+      {String? difficulty}) async {
+    if (difficulty != null) {
+      try {
+        return await compute(generateRandomLevelIsolate, difficulty)
+            .timeout(const Duration(seconds: 15));
+      } catch (e) {
+        debugPrint('Random level generation isolate error: $e');
+        return LevelGenerator.generateRandomLevel(difficulty: difficulty);
+      }
+    }
     return getLevelAsync(levelNumber, preGenerateNext: false);
   }
 

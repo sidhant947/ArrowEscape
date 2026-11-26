@@ -84,15 +84,17 @@ class MaskGenerator {
     return regions.first;
   }
 
-  static Set<String> squareMask(int side) {
+  static Set<String> rectMask(int cols, int rows) {
     final mask = <String>{};
-    for (int r = 0; r < side; r++) {
-      for (int c = 0; c < side; c++) {
+    for (int r = 0; r < rows; r++) {
+      for (int c = 0; c < cols; c++) {
         mask.add('$r,$c');
       }
     }
     return mask;
   }
+
+  static Set<String> squareMask(int side) => rectMask(side, side);
 
   static Set<String> catMask(int side) {
     return _fromPredicate(side, (x, y, absDx) {

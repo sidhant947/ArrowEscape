@@ -1,5 +1,5 @@
 import 'dart:ui' as ui;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 
@@ -11,7 +11,7 @@ import 'arrow_component.dart';
 
 class GridComponent extends PositionComponent with TapCallbacks {
   final GameState gameState;
-  double gridPixelSize;
+  double cellSize;
 
   final Map<String, ArrowComponent> _arrowComponents = {};
   late Set<String> _mask;
@@ -42,11 +42,12 @@ class GridComponent extends PositionComponent with TapCallbacks {
 
   GridComponent({
     required this.gameState,
-    required this.gridPixelSize,
+    required this.cellSize,
     required Vector2 position,
-  }) : super(position: position);
-
-  double get cellSize => gridPixelSize / gameState.level.gridSize;
+  }) : super(
+          position: position,
+          size: Vector2(gameState.level.cols * cellSize, gameState.level.rows * cellSize),
+        );
 
   @override
   bool containsLocalPoint(Vector2 point) {
@@ -66,11 +67,12 @@ class GridComponent extends PositionComponent with TapCallbacks {
     final localPos = event.localPosition;
     final c = (localPos.x / cellSize).floor();
     final r = (localPos.y / cellSize).floor();
-    final gridSize = gameState.level.gridSize;
+    final rows = gameState.level.rows;
+    final cols = gameState.level.cols;
 
-    if (r < -1 || r > gridSize || c < -1 || c > gridSize) return;
+    if (r < -1 || r > rows || c < -1 || c > cols) return;
 
-    if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
+    if (r >= 0 && r < rows && c >= 0 && c < cols) {
       for (final arrow in gameState.arrows) {
         if (arrow.path.any((pt) => pt[0] == r && pt[1] == c)) {
           return;
@@ -96,7 +98,7 @@ class GridComponent extends PositionComponent with TapCallbacks {
     for (final n in neighbors) {
       final nr = r + n[0];
       final nc = c + n[1];
-      if (nr < 0 || nr >= gridSize || nc < 0 || nc >= gridSize) continue;
+      if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
 
       for (final arrow in gameState.arrows) {
         for (final pt in arrow.path) {
@@ -131,7 +133,7 @@ class GridComponent extends PositionComponent with TapCallbacks {
 
   @override
   Future<void> onLoad() async {
-    size = Vector2.all(gridPixelSize);
+    size = Vector2(gameState.level.cols * cellSize, gameState.level.rows * cellSize);
     scale = Vector2.all(0.0);
     _refreshMask();
     _buildArrows();
@@ -164,9 +166,9 @@ class GridComponent extends PositionComponent with TapCallbacks {
     _invalidateDotGrid();
   }
 
-  void resize(double newGridPixelSize) {
-    gridPixelSize = newGridPixelSize;
-    size = Vector2.all(gridPixelSize);
+  void resize(double newCellSize) {
+    cellSize = newCellSize;
+    size = Vector2(gameState.level.cols * cellSize, gameState.level.rows * cellSize);
     for (final child in children) {
       if (child is ArrowComponent) child.updateCellSize(cellSize);
     }
@@ -179,12 +181,7 @@ class GridComponent extends PositionComponent with TapCallbacks {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
-    final gridSize = gameState.level.gridSize;
     final cs = cellSize;
-    final baseDot = (cs * 0.045).clamp(0.6, 1.6);
-    final inR = baseDot;
-    final outR = inR * 0.55;
-
     final themeColors = AppThemes.getThemeColors(gameState.theme);
     final dotColor = themeColors.arrowColor;
 
@@ -204,24 +201,6 @@ class GridComponent extends PositionComponent with TapCallbacks {
             Radius.circular(cs * 0.16),
           ),
           tilePaint,
-        );
-      }
-    }
-
-    final inPaint = Paint()
-      ..color = dotColor.withValues(alpha: isShaped ? 0.28 : 0.24)
-      ..style = PaintingStyle.fill;
-    final outPaint = Paint()
-      ..color = dotColor.withValues(alpha: isShaped ? 0.04 : 0.07)
-      ..style = PaintingStyle.fill;
-
-    for (int r = 0; r < gridSize; r++) {
-      for (int c = 0; c < gridSize; c++) {
-        final inMask = _mask.contains('$r,$c');
-        canvas.drawCircle(
-          Offset((c + 0.5) * cs, (r + 0.5) * cs),
-          inMask ? inR : outR,
-          inMask ? inPaint : outPaint,
         );
       }
     }

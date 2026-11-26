@@ -54,6 +54,35 @@ class AppConstants {
     }
   }
 
+  static (int, int) dimensionsForLevel(int level) {
+    final type = levelTypeFor(level);
+    if (type != LevelType.normal) {
+      final s = gridSizeForLevel(level);
+      return (s, s);
+    }
+    if (level < 150) {
+      final s = gridSizeForLevel(level);
+      return (s, s);
+    } else if (level < 300) {
+      return (22, 44);
+    } else if (level < 500) {
+      return (26, 52);
+    } else {
+      return (30, 60);
+    }
+  }
+
+  static (int, int) dimensionsForDifficulty(String difficulty) {
+    return switch (difficulty) {
+      'easy' => (16, 16),
+      'medium' => (20, 20),
+      'hard' => (22, 44),
+      'master' => (26, 52),
+      'expert' => (30, 60),
+      _ => (16, 16),
+    };
+  }
+
   static LevelType levelTypeFor(int level) {
     if (level % godLevelEvery == 0) return LevelType.god;
     if (level % bossLevelEvery == 0) return LevelType.boss;

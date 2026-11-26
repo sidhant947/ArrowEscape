@@ -1,11 +1,8 @@
-import 'dart:math';
-
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/app_themes.dart';
-import '../../core/constants.dart';
 import '../../core/audio_haptic_helper.dart';
 import '../../core/game_mode.dart';
 import '../../l10n/app_localizations.dart';
@@ -41,39 +38,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final currentLevel = progress.currentLevel;
     for (int i = 0; i < 4; i++) {
       levelRepo.preGenerateAsync(currentLevel + i);
-    }
-  }
-
-  int _randomLevelForDifficulty(String difficulty) {
-    final rng = Random();
-    switch (difficulty) {
-      case 'easy':
-        return AppConstants.randomEasyMin +
-            rng.nextInt(
-              AppConstants.randomEasyMax - AppConstants.randomEasyMin + 1,
-            );
-      case 'medium':
-        return AppConstants.randomMediumMin +
-            rng.nextInt(
-              AppConstants.randomMediumMax - AppConstants.randomMediumMin + 1,
-            );
-      case 'hard':
-        return AppConstants.randomHardMin +
-            rng.nextInt(
-              AppConstants.randomHardMax - AppConstants.randomHardMin + 1,
-            );
-      case 'master':
-        return AppConstants.randomMasterMin +
-            rng.nextInt(
-              AppConstants.randomMasterMax - AppConstants.randomMasterMin + 1,
-            );
-      case 'expert':
-        return AppConstants.randomExpertMin +
-            rng.nextInt(
-              AppConstants.randomExpertMax - AppConstants.randomExpertMin + 1,
-            );
-      default:
-        return 11;
     }
   }
 
@@ -166,13 +130,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _playRandom(String difficulty) async {
     Navigator.pop(context);
-    final levelNum = _randomLevelForDifficulty(difficulty);
     if (!mounted) return;
     setState(() => _isNavigating = true);
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => GameScreen(level: levelNum, isRandom: true),
+        builder: (_) =>
+            GameScreen(level: 0, isRandom: true, randomDifficulty: difficulty),
       ),
     );
     if (mounted) setState(() => _isNavigating = false);
@@ -230,16 +194,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           builder: (_) => const LevelSelectScreen(),
                         ),
                       );
-                    },
-                  ),
-                  (
-                    label: l10n.modeRandomTitle,
-                    description: l10n.modeRandomDesc,
-                    icon: Icons.casino_rounded,
-                    color: Colors.purpleAccent,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _showRandomPuzzleDialog();
                     },
                   ),
                   (
@@ -402,21 +356,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     horizontal: 20,
                     vertical: 10,
                   ),
-                  decoration: BoxDecoration(
-                    color: themeColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: themeColors.accentColor.withValues(alpha: 0.35),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: themeColors.accentDark.withValues(alpha: 0.25),
-                        offset: const Offset(0, 3),
-                        blurRadius: 0,
-                      ),
-                    ],
-                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -439,18 +378,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
                 _AppBarIconButton(
-                  icon: Icons.favorite_rounded,
-                  iconColor: const Color(0xFFFF4D6D),
-                  themeColors: themeColors,
-                  onTap: () async {
-                    try {
-                      await launchUrl(
-                        Uri.parse('https://ko-fi.com/sidhant947'),
-                        mode: LaunchMode.externalApplication,
-                      );
-                    } catch (_) {}
-                  },
-                ),
+                      icon: Icons.favorite_rounded,
+                      iconColor: const Color(0xFFFF4D6D),
+                      themeColors: themeColors,
+                      onTap: () async {
+                        try {
+                          await launchUrl(
+                            Uri.parse('https://ko-fi.com/sidhant947'),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        } catch (_) {}
+                      },
+                    )
+                    .animate(
+                      onPlay: (controller) => controller.repeat(reverse: true),
+                    )
+                    .scaleXY(
+                      begin: 0.95,
+                      end: 1.06,
+                      duration: 900.ms,
+                      curve: Curves.easeInOut,
+                    ),
               ],
             ),
           ),
@@ -516,7 +464,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const Spacer(flex: 3),
 
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   children: [
                     _MenuButton(
@@ -540,6 +488,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               }
                             },
                       showBorder: false,
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    _MenuButton(
+                      label: l10n.menuRandom,
+                      onTap: _isNavigating ? null : _showRandomPuzzleDialog,
                     ),
 
                     const SizedBox(height: 10),
@@ -615,7 +570,7 @@ class _MenuButton extends ConsumerWidget {
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 15),
         decoration: BoxDecoration(
           color: themeColors.surface,
           borderRadius: BorderRadius.circular(14),
@@ -721,26 +676,7 @@ class _AppBarIconButton extends StatelessWidget {
         AudioHapticHelper.playClick();
         onTap();
       },
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: themeColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: themeColors.accentColor.withValues(alpha: 0.35),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: themeColors.accentDark.withValues(alpha: 0.25),
-              offset: const Offset(0, 3),
-              blurRadius: 0,
-            ),
-          ],
-        ),
-        child: Center(child: Icon(icon, color: iconColor, size: 22)),
-      ),
+      child: Center(child: Icon(icon, color: iconColor, size: 22)),
     );
   }
 }

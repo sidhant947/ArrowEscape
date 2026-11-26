@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'dart:math';
 import 'package:flame/game.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,17 +20,20 @@ import '../../widgets/lives_bar.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../home/home_screen.dart';
+import 'confetti_celebration.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
   final int level;
   final bool isRandom;
   final GameMode gameMode;
+  final String? randomDifficulty;
 
   const GameScreen({
     super.key,
     required this.level,
     this.isRandom = false,
     this.gameMode = GameMode.classic,
+    this.randomDifficulty,
   });
 
   @override
@@ -44,7 +47,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
   GameState? _gameState;
   bool _showingGameOver = false;
   bool _showingComplete = false;
-  int _lives = AppConstants.maxLives;
   int? _loadedLevelNum;
   bool _isLoadingLevel = false;
 
@@ -81,9 +83,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
     if (useCache && levelRepo.isCached(levelNum)) {
       _level = levelRepo.getLevel(levelNum);
       _initGame();
-
       if (!widget.isRandom) {
-        levelRepo.preGenerateRangeAsync(levelNum + 1, 5);
+        levelRepo.preGenerateRangeAsync(levelNum + 1, 1);
       }
       return;
     }
@@ -92,19 +93,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
     try {
       final level = widget.isRandom
-          ? await levelRepo.getRandomLevelAsync(levelNum)
+          ? await levelRepo.getRandomLevelAsync(levelNum,
+              difficulty: widget.randomDifficulty)
           : await levelRepo.getLevelAsync(levelNum, preGenerateNext: true);
       if (!mounted) return;
       _level = level;
       _initGame();
       setState(() => _isLoadingLevel = false);
-
-      if (!widget.isRandom) {
-        levelRepo.preGenerateRangeAsync(levelNum + 1, 5);
-      }
     } catch (_) {
       if (!mounted) return;
-      _level = levelRepo.getLevel(levelNum);
+      _level = await levelRepo.getLevelAsync(levelNum, preGenerateNext: false);
       _initGame();
       if (mounted) setState(() => _isLoadingLevel = false);
     }
@@ -112,7 +110,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   double _shakeOffset = 0.0;
   Timer? _shakeTimer;
-  
+
   String? _comboText;
   Timer? _comboTimer;
 
@@ -174,10 +172,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   void _initGame() {
     final progress = ref.read(progressRepositoryProvider);
-    final isLifeFree = widget.gameMode == GameMode.zen ||
+    final isLifeFree =
+        widget.gameMode == GameMode.zen ||
         widget.gameMode == GameMode.timeAttack ||
         progress.heartRemover;
-    _lives = isLifeFree ? 999 : AppConstants.maxLives;
     _showingGameOver = false;
     _gameState?.removeListener(_onGameStateChanged);
     _gameState = GameState(
@@ -205,17 +203,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _resetTimerForLevel();
   }
 
-  void _onGameStateChanged() {
-    if (!mounted) return;
-    setState(() {
-      _lives = _gameState!.lives;
-    });
-  }
+  void _onGameStateChanged() {}
 
-  void _onLifeLost() {
-    if (!mounted) return;
-    setState(() => _lives = _gameState!.lives);
-  }
+  void _onLifeLost() {}
 
   void _onLevelComplete() {
     if (!mounted || _showingComplete) return;
@@ -227,13 +217,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final stars = ProgressRepository.calculateStars(_gameState!.livesLost);
 
     if (!widget.isRandom && widget.gameMode == GameMode.classic) {
-      progress.recordLevelComplete(LevelResult(
-        levelNumber: _level.levelNumber,
-        stars: stars,
-        livesLost: _gameState!.livesLost,
-        completed: true,
-        completedAt: DateTime.now(),
-      ));
+      progress.recordLevelComplete(
+        LevelResult(
+          levelNumber: _level.levelNumber,
+          stars: stars,
+          livesLost: _gameState!.livesLost,
+          completed: true,
+          completedAt: DateTime.now(),
+        ),
+      );
     }
 
     if (widget.gameMode == GameMode.timeAttack) {
@@ -272,14 +264,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   Future<void> _handleRestart() async {
     if (mounted) {
-      final isLifeFree = widget.gameMode == GameMode.zen ||
-          widget.gameMode == GameMode.timeAttack ||
-          ref.read(progressRepositoryProvider).heartRemover;
       setState(() {
         _showingGameOver = false;
         _showingComplete = false;
         _game.resetLevel();
-        _lives = isLifeFree ? 999 : AppConstants.maxLives;
         _resetTimerForLevel();
       });
     }
@@ -349,7 +337,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
               _DialogButton(
                 label: l10n.dialogLeave,
                 icon: Icons.close_rounded,
-                textColor: themeColors.textSecondary,
+                textColor: themeColors.textPrimary,
                 iconColor: themeColors.accentColor,
                 onTap: () => Navigator.pop(ctx, true),
               ),
@@ -393,6 +381,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
       barrierDismissible: false,
       builder: (_) => Stack(
         children: [
+          const Positioned.fill(
+            child: IgnorePointer(
+              child: ConfettiCelebration(),
+            ),
+          ),
           _LevelCompleteDialog(
             level: _level,
             stars: stars,
@@ -418,15 +411,19 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   Future<void> _showGameOverDialog() async {
     final levelType = AppConstants.levelTypeFor(_level.levelNumber);
-    final hasTimer = (levelType == LevelType.god && _level.levelNumber > 100) ||
+    final hasTimer =
+        (levelType == LevelType.god && _level.levelNumber > 100) ||
         (levelType == LevelType.boss && _level.levelNumber > 200);
 
     int continueTime = 0;
     if (hasTimer && _gameState != null) {
-      final remainingArrows =
-          _gameState!.arrows.where((a) => a.state != ArrowState.sliding).length;
-      continueTime =
-          _calculateContinueDuration(_level.levelNumber, remainingArrows);
+      final remainingArrows = _gameState!.arrows
+          .where((a) => a.state != ArrowState.sliding)
+          .length;
+      continueTime = _calculateContinueDuration(
+        _level.levelNumber,
+        remainingArrows,
+      );
     }
 
     await showDialog(
@@ -449,7 +446,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
               _startLevelTimer();
             } else {
               _gameState!.restoreLife();
-              _lives = _gameState!.lives;
             }
           });
         },
@@ -493,16 +489,24 @@ class _GameScreenState extends ConsumerState<GameScreen>
   int _calculateLevelTimerDuration(int levelNum, int totalArrows) {
     final type = AppConstants.levelTypeFor(levelNum);
     if (type == LevelType.god && levelNum > 100) {
-      final baseSeconds =
-          (45.0 - (levelNum - 100) * (20.0 / 400.0)).clamp(25.0, 45.0);
-      final secondsPerArrow =
-          (2.5 - (levelNum - 100) * (1.0 / 400.0)).clamp(1.5, 2.5);
+      final baseSeconds = (45.0 - (levelNum - 100) * (20.0 / 400.0)).clamp(
+        25.0,
+        45.0,
+      );
+      final secondsPerArrow = (2.5 - (levelNum - 100) * (1.0 / 400.0)).clamp(
+        1.5,
+        2.5,
+      );
       return (baseSeconds + secondsPerArrow * totalArrows).round();
     } else if (type == LevelType.boss && levelNum > 200) {
-      final baseSeconds =
-          (40.0 - (levelNum - 200) * (20.0 / 300.0)).clamp(20.0, 40.0);
-      final secondsPerArrow =
-          (2.2 - (levelNum - 200) * (0.8 / 300.0)).clamp(1.4, 2.2);
+      final baseSeconds = (40.0 - (levelNum - 200) * (20.0 / 300.0)).clamp(
+        20.0,
+        40.0,
+      );
+      final secondsPerArrow = (2.2 - (levelNum - 200) * (0.8 / 300.0)).clamp(
+        1.4,
+        2.2,
+      );
       return (baseSeconds + secondsPerArrow * totalArrows).round();
     }
     return 0;
@@ -511,12 +515,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
   int _calculateContinueDuration(int levelNum, int remainingArrows) {
     final type = AppConstants.levelTypeFor(levelNum);
     if (type == LevelType.god) {
-      final secondsPerArrow =
-          (2.2 - (levelNum - 100) * (0.7 / 400.0)).clamp(1.5, 2.2);
+      final secondsPerArrow = (2.2 - (levelNum - 100) * (0.7 / 400.0)).clamp(
+        1.5,
+        2.2,
+      );
       return (20.0 + secondsPerArrow * remainingArrows).round();
     } else if (type == LevelType.boss) {
-      final secondsPerArrow =
-          (2.0 - (levelNum - 200) * (0.6 / 300.0)).clamp(1.4, 2.0);
+      final secondsPerArrow = (2.0 - (levelNum - 200) * (0.6 / 300.0)).clamp(
+        1.4,
+        2.0,
+      );
       return (15.0 + secondsPerArrow * remainingArrows).round();
     }
     return 45;
@@ -534,12 +542,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
       _startLevelTimer();
     } else if (widget.gameMode == GameMode.classic) {
       final levelType = AppConstants.levelTypeFor(_level.levelNumber);
-      final hasTimer = (levelType == LevelType.god && _level.levelNumber > 100) ||
+      final hasTimer =
+          (levelType == LevelType.god && _level.levelNumber > 100) ||
           (levelType == LevelType.boss && _level.levelNumber > 200);
 
       if (hasTimer) {
         _totalTime = _calculateLevelTimerDuration(
-            _level.levelNumber, _level.arrows.length);
+          _level.levelNumber,
+          _level.arrows.length,
+        );
         _timeRemaining = _totalTime;
         _startLevelTimer();
       } else {
@@ -597,14 +608,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
       return _LevelLoadingScreen(themeColors: themeColors);
     }
 
-    final totalArrows = _level.arrows.length;
-    final activeArrows =
-        _gameState?.arrows.where((a) => a.state != ArrowState.sliding).length ??
-            totalArrows;
-    final clearedArrows = totalArrows - activeArrows;
-    final progressVal =
-        totalArrows > 0 ? (clearedArrows / totalArrows).clamp(0.0, 1.0) : 0.0;
-
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -625,137 +628,183 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   score: _timeAttackScore,
                   themeColors: themeColors,
                 ),
-              if (_totalTime > 0 || widget.gameMode == GameMode.timeAttack)
-                RepaintBoundary(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _TimerDisplay(
-                      timeRemaining: _timeRemaining,
-                      totalTime: widget.gameMode == GameMode.timeAttack ? 99 : _totalTime,
+                if (_totalTime > 0 || widget.gameMode == GameMode.timeAttack)
+                  RepaintBoundary(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _TimerDisplay(
+                        timeRemaining: _timeRemaining,
+                        totalTime: widget.gameMode == GameMode.timeAttack
+                            ? 99
+                            : _totalTime,
+                      ),
                     ),
                   ),
-                ),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final boardSize =
-                        min(constraints.maxWidth, constraints.maxHeight - 16);
-                    final comboCount = _gameState?.comboCount ?? 2;
-                    final comboColor = themeColors.arrowPalette != null
-                        ? themeColors.arrowPalette![(comboCount - 2).clamp(0, 1000) % themeColors.arrowPalette!.length]
-                        : (themeColors.isLight ? themeColors.accentDark : themeColors.accentColor);
-                    return Transform.translate(
-                      offset: Offset(_shakeOffset, 0),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          RepaintBoundary(
-                            child: InteractiveViewer(
-                              minScale: 0.8,
-                              maxScale: 4.0,
-                              boundaryMargin: const EdgeInsets.all(60),
-                              clipBehavior: Clip.hardEdge,
-                              child: Center(
-                                child: SizedBox(
-                                  width: boardSize,
-                                  height: boardSize,
-                                  child: GameWidget(game: _game),
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (_comboText != null)
-                            Positioned(
-                              top: 20,
-                              child: RepaintBoundary(
-                                child: Text(
-                                  _comboText!,
-                                  style: TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w900,
-                                    color: comboColor,
-                                    letterSpacing: 1.5,
-                                    shadows: themeColors.isLight
-                                        ? [
-                                            Shadow(
-                                              color: comboColor.withValues(alpha: 0.35),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ]
-                                        : [
-                                            const Shadow(
-                                              color: Colors.black87,
-                                              blurRadius: 12,
-                                              offset: Offset(0, 2),
-                                            ),
-                                            if (themeColors.hasGlow)
-                                              Shadow(
-                                                color: comboColor,
-                                                blurRadius: 16,
-                                              ),
-                                          ],
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final maxW = constraints.maxWidth;
+                      final maxH = constraints.maxHeight - 16;
+                      final aspect = _level.cols / _level.rows;
+                      final double boardWidth, boardHeight;
+                      if (maxW / maxH < aspect) {
+                        boardWidth = maxW;
+                        boardHeight = maxW / aspect;
+                      } else {
+                        boardHeight = maxH;
+                        boardWidth = maxH * aspect;
+                      }
+                      final comboCount = _gameState?.comboCount ?? 2;
+                      final comboColor = themeColors.arrowPalette != null
+                          ? themeColors.arrowPalette![(comboCount - 2).clamp(
+                                  0,
+                                  1000,
+                                ) %
+                                themeColors.arrowPalette!.length]
+                          : (themeColors.isLight
+                                ? themeColors.accentDark
+                                : themeColors.accentColor);
+                      return Transform.translate(
+                        offset: Offset(_shakeOffset, 0),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            RepaintBoundary(
+                              child: InteractiveViewer(
+                                minScale: 0.8,
+                                maxScale: 4.0,
+                                boundaryMargin: const EdgeInsets.all(60),
+                                clipBehavior: Clip.hardEdge,
+                                child: Center(
+                                  child: SizedBox(
+                                    width: boardWidth,
+                                    height: boardHeight,
+                                    child: GameWidget(game: _game),
                                   ),
-                                )
-                                    .animate()
-                                    .scale(
-                                        begin: const Offset(0.5, 0.5),
-                                        end: const Offset(1.15, 1.15),
-                                        duration: 200.ms,
-                                        curve: Curves.elasticOut)
-                                    .then()
-                                    .scale(
-                                        begin: const Offset(1.15, 1.15),
-                                        end: const Offset(1.0, 1.0),
-                                        duration: 100.ms),
+                                ),
                               ),
                             ),
-                          if (_showBonusAnimation)
-                            Positioned(
-                              top: 60,
-                              child: Text(
-                                _bonusText,
-                                style: const TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.orangeAccent,
-                                  letterSpacing: 1.5,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black87,
-                                      blurRadius: 12,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
+                            if (_comboText != null)
+                              Positioned(
+                                top: 20,
+                                child: RepaintBoundary(
+                                  child:
+                                      Text(
+                                            _comboText!,
+                                            style: TextStyle(
+                                              fontSize: 26,
+                                              fontWeight: FontWeight.w900,
+                                              color: comboColor,
+                                              letterSpacing: 1.5,
+                                              shadows: themeColors.isLight
+                                                  ? [
+                                                      Shadow(
+                                                        color: comboColor
+                                                            .withValues(
+                                                              alpha: 0.35,
+                                                            ),
+                                                        blurRadius: 8,
+                                                        offset: const Offset(
+                                                          0,
+                                                          2,
+                                                        ),
+                                                      ),
+                                                    ]
+                                                  : [
+                                                      const Shadow(
+                                                        color: Colors.black87,
+                                                        blurRadius: 12,
+                                                        offset: Offset(0, 2),
+                                                      ),
+                                                      if (themeColors.hasGlow)
+                                                        Shadow(
+                                                          color: comboColor,
+                                                          blurRadius: 16,
+                                                        ),
+                                                    ],
+                                            ),
+                                          )
+                                          .animate()
+                                          .scale(
+                                            begin: const Offset(0.5, 0.5),
+                                            end: const Offset(1.15, 1.15),
+                                            duration: 200.ms,
+                                            curve: Curves.elasticOut,
+                                          )
+                                          .then()
+                                          .scale(
+                                            begin: const Offset(1.15, 1.15),
+                                            end: const Offset(1.0, 1.0),
+                                            duration: 100.ms,
+                                          ),
                                 ),
-                              )
-                                  .animate()
-                                  .fadeIn(duration: 200.ms)
-                                  .slideY(
-                                      begin: 0.5,
-                                      end: -0.2,
-                                      duration: 600.ms,
-                                      curve: Curves.easeOut)
-                                  .fadeOut(delay: 500.ms, duration: 300.ms),
-                            ),
-                        ],
-                      ),
-                    );
-                  },
+                              ),
+                            if (_showBonusAnimation)
+                              Positioned(
+                                top: 60,
+                                child:
+                                    Text(
+                                          _bonusText,
+                                          style: const TextStyle(
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.orangeAccent,
+                                            letterSpacing: 1.5,
+                                            shadows: [
+                                              Shadow(
+                                                color: Colors.black87,
+                                                blurRadius: 12,
+                                                offset: Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                        .animate()
+                                        .fadeIn(duration: 200.ms)
+                                        .slideY(
+                                          begin: 0.5,
+                                          end: -0.2,
+                                          duration: 600.ms,
+                                          curve: Curves.easeOut,
+                                        )
+                                        .fadeOut(
+                                          delay: 500.ms,
+                                          duration: 300.ms,
+                                        ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-              _BottomBar(
-                lives: _lives,
-                progress: progressVal,
-                gameMode: widget.gameMode,
-                heartRemover: progressState.heartRemover,
-                themeColors: themeColors,
-              ),
-            ],
+                if (_gameState != null)
+                  ListenableBuilder(
+                    listenable: _gameState!,
+                    builder: (context, _) {
+                      final totalArrows = _level.arrows.length;
+                      final activeArrows = _gameState!.arrows
+                          .where((a) => a.state != ArrowState.sliding)
+                          .length;
+                      final clearedArrows = totalArrows - activeArrows;
+                      final progressVal = totalArrows > 0
+                          ? (clearedArrows / totalArrows).clamp(0.0, 1.0)
+                          : 0.0;
+                      return _BottomBar(
+                        lives: _gameState!.lives,
+                        progress: progressVal,
+                        gameMode: widget.gameMode,
+                        heartRemover: progressState.heartRemover,
+                        themeColors: themeColors,
+                      );
+                    },
+                  ),
+              ],
+            ),
           ),
         ),
       ),
-    ));
+    );
   }
 
   bool get _isLevelReady => _gameState != null;
@@ -765,10 +814,7 @@ class _TimerDisplay extends ConsumerWidget {
   final int timeRemaining;
   final int totalTime;
 
-  const _TimerDisplay({
-    required this.timeRemaining,
-    required this.totalTime,
-  });
+  const _TimerDisplay({required this.timeRemaining, required this.totalTime});
 
   String _formatTime(int seconds) {
     final m = (seconds ~/ 60).toString().padLeft(2, '0');
@@ -780,7 +826,7 @@ class _TimerDisplay extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = (timeRemaining / totalTime).clamp(0.0, 1.0);
     final isLowTime = timeRemaining <= 15 || timeRemaining <= totalTime * 0.15;
-    
+
     final progressState = ref.watch(progressRepositoryProvider);
     final themeColors = AppThemes.getThemeColors(progressState.selectedTheme);
     final color = isLowTime ? const Color(0xFF808080) : themeColors.accentColor;
@@ -809,11 +855,7 @@ class _TimerDisplay extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.hourglass_top,
-                color: color,
-                size: 16,
-              ),
+              Icon(Icons.hourglass_top, color: color, size: 16),
               const SizedBox(width: 6),
               Text(
                 _formatTime(timeRemaining),
@@ -833,7 +875,9 @@ class _TimerDisplay extends ConsumerWidget {
               height: 3,
               child: LinearProgressIndicator(
                 value: progress,
-                backgroundColor: themeColors.surfaceLight.withValues(alpha: 0.3),
+                backgroundColor: themeColors.surfaceLight.withValues(
+                  alpha: 0.3,
+                ),
                 valueColor: AlwaysStoppedAnimation<Color>(color),
               ),
             ),
@@ -844,14 +888,13 @@ class _TimerDisplay extends ConsumerWidget {
 
     if (isLowTime) {
       content = content
-          .animate(
-            onPlay: (controller) => controller.repeat(reverse: true),
-          )
+          .animate(onPlay: (controller) => controller.repeat(reverse: true))
           .scaleXY(
-              begin: 0.96,
-              end: 1.04,
-              duration: 400.ms,
-              curve: Curves.easeInOut);
+            begin: 0.96,
+            end: 1.04,
+            duration: 400.ms,
+            curve: Curves.easeInOut,
+          );
     }
 
     return content;
@@ -900,8 +943,11 @@ class _TopBar extends StatelessWidget {
               onTap: onBack,
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Icon(Icons.arrow_back,
-                    color: themeColors.textPrimary, size: 22),
+                child: Icon(
+                  Icons.arrow_back,
+                  color: themeColors.textPrimary,
+                  size: 22,
+                ),
               ),
             ),
           ),
@@ -956,8 +1002,9 @@ class _BottomBar extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 backgroundColor: themeColors.surfaceLight,
-                valueColor:
-                    AlwaysStoppedAnimation<Color>(themeColors.accentColor),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  themeColors.accentColor,
+                ),
               ),
             ),
           ),
@@ -1031,44 +1078,52 @@ class _LevelCompleteDialog extends ConsumerWidget {
           color: themeColors.surface,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
-              color: themeColors.accentColor.withValues(alpha: 0.35),
-              width: 2.5),
+            color: themeColors.accentColor.withValues(alpha: 0.35),
+            width: 2.5,
+          ),
           boxShadow: [
             BoxShadow(
-                color: themeColors.accentDark.withValues(alpha: 0.18),
-                blurRadius: 32),
+              color: themeColors.accentDark.withValues(alpha: 0.18),
+              blurRadius: 32,
+            ),
           ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l10n.levelCompleteTitle,
-                style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: themeColors.textPrimary)),
+            Text(
+              l10n.levelCompleteTitle,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: themeColors.textPrimary,
+              ),
+            ),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                  3,
-                  (i) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Icon(
-                          i < stars
-                              ? Icons.star_rounded
-                              : Icons.star_border_rounded,
-                          color: i < stars
-                              ? themeColors.accentColor
-                              : themeColors.surface.withValues(alpha: 0.6),
-                          size: 38,
+                3,
+                (i) =>
+                    Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Icon(
+                            i < stars
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
+                            color: i < stars
+                                ? themeColors.accentColor
+                                : themeColors.surface.withValues(alpha: 0.6),
+                            size: 38,
+                          ),
+                        )
+                        .animate(delay: Duration(milliseconds: 200 + i * 150))
+                        .scale(
+                          begin: const Offset(0, 0),
+                          end: const Offset(1, 1),
+                          curve: Curves.elasticOut,
                         ),
-                      )
-                          .animate(delay: Duration(milliseconds: 200 + i * 150))
-                          .scale(
-                              begin: const Offset(0, 0),
-                              end: const Offset(1, 1),
-                              curve: Curves.elasticOut)),
+              ),
             ),
             const SizedBox(height: 24),
             if (level.levelNumber == 500) ...[
@@ -1081,14 +1136,17 @@ class _LevelCompleteDialog extends ConsumerWidget {
                 child: Column(
                   children: [
                     Icon(
-                      Icons.emoji_events,
-                      color: themeColors.accentColor,
-                      size: 32,
-                    ).animate(onPlay: (c) => c.repeat()).scale(
-                        begin: const Offset(0.9, 0.9),
-                        end: const Offset(1.1, 1.1),
-                        duration: 1.seconds,
-                        curve: Curves.easeInOut),
+                          Icons.emoji_events,
+                          color: themeColors.accentColor,
+                          size: 32,
+                        )
+                        .animate(onPlay: (c) => c.repeat())
+                        .scale(
+                          begin: const Offset(0.9, 0.9),
+                          end: const Offset(1.1, 1.1),
+                          duration: 1.seconds,
+                          curve: Curves.easeInOut,
+                        ),
                     const SizedBox(height: 10),
                     Text(
                       l10n.gameFinishedTitle,
@@ -1184,12 +1242,14 @@ class _GameOverDialog extends ConsumerWidget {
           color: themeColors.surface,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
-              color: themeColors.accentColor.withValues(alpha: 0.35),
-              width: 2.5),
+            color: themeColors.accentColor.withValues(alpha: 0.35),
+            width: 2.5,
+          ),
           boxShadow: [
             BoxShadow(
-                color: themeColors.accentColor.withValues(alpha: 0.18),
-                blurRadius: 32),
+              color: themeColors.accentColor.withValues(alpha: 0.18),
+              blurRadius: 32,
+            ),
           ],
         ),
         child: Column(
@@ -1199,8 +1259,9 @@ class _GameOverDialog extends ConsumerWidget {
               isTimeAttack
                   ? Icons.timer_off_rounded
                   : (isTimeout ? Icons.hourglass_top : Icons.heart_broken),
-              color:
-                  isTimeAttack ? Colors.orangeAccent : themeColors.accentColor,
+              color: isTimeAttack
+                  ? Colors.orangeAccent
+                  : themeColors.accentColor,
               size: 52,
             ).animate().shake(duration: 500.ms),
             const SizedBox(height: 12),
@@ -1294,11 +1355,13 @@ class _DialogButton extends ConsumerWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon,
-                  color: iconColor == Colors.white
-                      ? themeColors.accentColor
-                      : iconColor,
-                  size: 20),
+              Icon(
+                icon,
+                color: iconColor == Colors.white
+                    ? themeColors.accentColor
+                    : iconColor,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 label,

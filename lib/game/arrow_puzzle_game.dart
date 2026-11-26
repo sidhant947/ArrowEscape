@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flame/game.dart';
 import 'package:flame/components.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/constants.dart';
 import '../../data/models/level.dart';
@@ -34,16 +34,20 @@ class ArrowPuzzleGame extends FlameGame {
     final levelType = AppConstants.levelTypeFor(level.levelNumber);
     final scale = AppConstants.canvasScaleForType(levelType);
 
-    final minDim = size.x < size.y ? size.x : size.y;
-    final gridSize = minDim * scale;
-    final gridX = (size.x - gridSize) / 2;
-    
-    final gridY = (size.y - gridSize) / 2;
+    final availWidth = size.x * scale;
+    final availHeight = size.y * scale;
+    final cellSize = (availWidth / level.cols < availHeight / level.rows)
+        ? (availWidth / level.cols)
+        : (availHeight / level.rows);
+    final gridWidth = level.cols * cellSize;
+    final gridHeight = level.rows * cellSize;
+    final gridX = (size.x - gridWidth) / 2;
+    final gridY = (size.y - gridHeight) / 2;
 
     gridComponent = GridComponent(
       gameState: gameState,
-      gridPixelSize: gridSize,
-      position: Vector2(gridX + gridSize / 2, gridY + gridSize / 2),
+      cellSize: cellSize,
+      position: Vector2(gridX + gridWidth / 2, gridY + gridHeight / 2),
     )..anchor = Anchor.center;
 
     add(gridComponent!);
@@ -55,14 +59,19 @@ class ArrowPuzzleGame extends FlameGame {
 
     final levelType = AppConstants.levelTypeFor(level.levelNumber);
     final scale = AppConstants.canvasScaleForType(levelType);
-    final minDim = size.x < size.y ? size.x : size.y;
-    final gridSize = minDim * scale;
-    final gridX = (size.x - gridSize) / 2;
-    final gridY = (size.y - gridSize) / 2;
+    final availWidth = size.x * scale;
+    final availHeight = size.y * scale;
+    final cellSize = (availWidth / level.cols < availHeight / level.rows)
+        ? (availWidth / level.cols)
+        : (availHeight / level.rows);
+    final gridWidth = level.cols * cellSize;
+    final gridHeight = level.rows * cellSize;
+    final gridX = (size.x - gridWidth) / 2;
+    final gridY = (size.y - gridHeight) / 2;
 
     if (gridComponent != null) {
-      gridComponent!.position = Vector2(gridX + gridSize / 2, gridY + gridSize / 2);
-      gridComponent!.resize(gridSize);
+      gridComponent!.position = Vector2(gridX + gridWidth / 2, gridY + gridHeight / 2);
+      gridComponent!.resize(cellSize);
     }
   }
 

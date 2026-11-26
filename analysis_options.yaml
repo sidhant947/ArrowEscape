@@ -12,6 +12,7 @@ analyzer:
     - build/**
     - android/**
     - linux/**
+    - lib/l10n/**
 include: package:flutter_lints/flutter.yaml
 
 linter:
